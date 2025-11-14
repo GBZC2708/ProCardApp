@@ -28,6 +28,14 @@ interface DailyMetricsDao {
     fun observeMetricsForDay(username: String, dateEpoch: Long): Flow<DailyMetricsEntity?>
 
     /**
+     * Obtiene una instantánea rápida del registro del día sin mantener un Flow activo, ideal para servicios.
+     */
+    @Query(
+        "SELECT * FROM daily_metrics WHERE username = :username AND dateEpoch = :dateEpoch LIMIT 1"
+    )
+    suspend fun getMetricsForDay(username: String, dateEpoch: Long): DailyMetricsEntity?
+
+    /**
      * Observa el historial completo de un usuario ordenado por fecha descendente para lecturas rápidas.
      */
     @Query(

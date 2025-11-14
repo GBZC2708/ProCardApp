@@ -5,15 +5,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import pe.com.zzynan.procardapp.data.local.dao.DailyMetricsDao
+import pe.com.zzynan.procardapp.data.local.dao.UserProfileDao
 import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
+import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
 
 /**
  * Base de datos de Room configurada como singleton para evitar múltiples instancias en memoria.
- * Incluye configuración WAL para mejorar rendimiento de escritura/lectura concurrente.
+ * Se habilita WAL y se mantienen solo las entidades necesarias para reducir IO innecesario.
  */
 @Database(
-    entities = [DailyMetricsEntity::class],
-    version = 1,
+    entities = [DailyMetricsEntity::class, UserProfileEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,6 +24,11 @@ abstract class AppDatabase : RoomDatabase() {
      * Expone el DAO de métricas diarias hacia la capa de datos.
      */
     abstract fun dailyMetricsDao(): DailyMetricsDao
+
+    /**
+     * Expone el DAO del perfil de usuario minimizando accesos redundantes.
+     */
+    abstract fun userProfileDao(): UserProfileDao
 
     companion object {
         @Volatile

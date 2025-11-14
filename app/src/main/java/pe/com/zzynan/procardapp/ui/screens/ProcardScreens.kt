@@ -1,16 +1,64 @@
 package pe.com.zzynan.procardapp.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import pe.com.zzynan.procardapp.R
+import pe.com.zzynan.procardapp.ui.components.StepCounterCard
+import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
 
 // File: app/src/main/java/pe/com/zzynan/procardapp/ui/screens/ProcardScreens.kt
 @Composable
-fun RegistroScreen(modifier: Modifier = Modifier) {
-    // Pantalla de Registro que pronto mostrará el seguimiento diario del progreso.
-    Box(modifier = modifier.fillMaxSize()) {
-        // TODO: agregar contenido de esta pantalla.
+fun RegistroScreen(
+    uiState: DailyRegisterUiState,
+    onToggleStepCounter: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        StepCounterCard(
+            uiModel = uiState.stepCounter,
+            onPlayPauseClick = onToggleStepCounter,
+            modifier = Modifier.fillMaxWidth()
+        )
+        uiState.metrics?.let { metrics ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.daily_steps_saved, metrics.dailySteps),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = stringResource(id = R.string.daily_last_update_user, uiState.userName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(200.dp))
     }
 }
 
