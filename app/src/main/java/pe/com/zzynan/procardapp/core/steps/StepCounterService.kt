@@ -61,15 +61,19 @@ class StepCounterService : Service(), SensorEventListener {
     private var currentUsername: String = UserProfile.DEFAULT_DISPLAY_NAME
     private var currentDate: LocalDate = LocalDate.now()
     private var baseSensorValue: Float? = null
+    private var lastSensorTotal: Float? = null
     private var stepsToday: Int = 0
     private var isForeground = false
     private var hasLoadedInitialMetrics = false
+    private var lastPersistedSteps: Int = 0
+    private var lastPersistTimeMillis: Long = 0L
 
     override fun onCreate() {
         super.onCreate()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        lastPersistTimeMillis = System.currentTimeMillis()
         createNotificationChannel()
         observeProfileChanges()
         observeStateUpdates()
@@ -93,6 +97,8 @@ class StepCounterService : Service(), SensorEventListener {
         runBlocking {
             saveDailyStepsUseCase(currentUsername, currentDate.toEpochDayLong(), stepsToday)
         }
+        lastPersistedSteps = stepsToday
+        lastPersistTimeMillis = System.currentTimeMillis()
         sensorManager.unregisterListener(this)
         serviceScope.cancel()
         StepCounterStateHolder.setRunning(false)
@@ -112,6 +118,7 @@ class StepCounterService : Service(), SensorEventListener {
 
     private fun handleCounterEvent(event: SensorEvent) {
         val totalSteps = event.values.firstOrNull() ?: return
+        lastSensorTotal = totalSteps
         if (baseSensorValue == null) {
             baseSensorValue = totalSteps - stepsToday
         }
@@ -119,6 +126,7 @@ class StepCounterService : Service(), SensorEventListener {
         if (computed >= 0 && computed != stepsToday) {
             stepsToday = computed
             StepCounterStateHolder.updateSteps(stepsToday)
+            persistStepsIfNeeded() // Auto-guardado tras cambios del contador de pasos
         }
     }
 
@@ -127,6 +135,7 @@ class StepCounterService : Service(), SensorEventListener {
         if (increment > 0) {
             stepsToday += increment
             StepCounterStateHolder.updateSteps(stepsToday)
+            persistStepsIfNeeded() // Auto-guardado tras cambios del detector de pasos
         }
     }
 
@@ -148,6 +157,8 @@ class StepCounterService : Service(), SensorEventListener {
         serviceScope.launch {
             saveDailyStepsUseCase(currentUsername, currentDate.toEpochDayLong(), stepsToday)
         }
+        lastPersistedSteps = stepsToday
+        lastPersistTimeMillis = System.currentTimeMillis()
     }
 
     private fun requestInitialLoad() {
@@ -204,15 +215,37 @@ class StepCounterService : Service(), SensorEventListener {
         stepsToday = 0
         StepCounterStateHolder.updateSteps(0)
         baseSensorValue = null
+        lastSensorTotal = null
+        lastPersistedSteps = 0
+        lastPersistTimeMillis = System.currentTimeMillis()
         loadStepsForCurrentUser()
     }
 
     private suspend fun loadStepsForCurrentUser() {
         val metrics = getTodayMetricsUseCase.current(currentUsername, currentDate.toEpochDayLong())
-        stepsToday = metrics?.dailySteps ?: 0
+        val persistedSteps = metrics?.dailySteps
+        if (persistedSteps != null) {
+            stepsToday = maxOf(stepsToday, persistedSteps)
+        }
         StepCounterStateHolder.updateSteps(stepsToday)
-        baseSensorValue = null
+        baseSensorValue = lastSensorTotal?.minus(stepsToday.toFloat())
+        // Restablece el conteo usando el último total del sensor y lo persistido
+        lastPersistedSteps = stepsToday
+        lastPersistTimeMillis = System.currentTimeMillis()
         updateNotification()
+    }
+
+    private fun persistStepsIfNeeded() {
+        val now = System.currentTimeMillis()
+        val stepsDifference = stepsToday - lastPersistedSteps
+        val elapsed = now - lastPersistTimeMillis
+        if (stepsDifference >= 20 || elapsed >= TimeUnit.SECONDS.toMillis(30)) {
+            lastPersistedSteps = stepsToday
+            lastPersistTimeMillis = now
+            serviceScope.launch {
+                saveDailyStepsUseCase(currentUsername, currentDate.toEpochDayLong(), stepsToday)
+            } // Evita bloquear guardando en lote y no en cada paso (anti guardado excesivo)
+        }
     }
 
     private fun ensureForeground() {
