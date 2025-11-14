@@ -1,58 +1,61 @@
 package pe.com.zzynan.procardapp.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// File: app/src/main/java/pe/com/zzynan/procardapp/ui/theme/Theme.kt
+
+// Paleta Material 3 para el modo oscuro.
+val ProcardDarkColorScheme = darkColorScheme(
+    primary = OlympiaRed, // Color principal para botones, íconos activos y resaltados.
+    onPrimary = PureWhite, // Texto en botones/elementos primarios en modo oscuro.
+    primaryContainer = DarkPrimaryDark, // Contenedor primario (chips, cards enfatizados) en modo oscuro.
+    onPrimaryContainer = PureWhite, // Texto sobre contenedores primarios oscuros.
+    secondary = SteelSilver, // Texto secundario en modo oscuro.
+    onSecondary = DarkBackground,
+    background = DarkBackground, // Fondo general de la app en modo oscuro.
+    onBackground = PureWhite, // Texto principal sobre el fondo oscuro.
+    surface = DarkCard, // Superficies elevadas como app bar y tarjetas.
+    onSurface = PureWhite, // Texto sobre superficies oscuras.
+    surfaceVariant = Charcoal, // Superficies alternativas para secciones diferenciadas.
+    onSurfaceVariant = SteelSilver, // Texto secundario sobre superficies alternativas.
+    outline = DarkBorder, // Bordes y divisores en modo oscuro.
+    tertiary = DarkPrimaryLight, // Colores de énfasis complementarios (por ejemplo, íconos del bottom nav).
+    onTertiary = DarkBackground
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+// Paleta Material 3 para el modo claro.
+val ProcardLightColorScheme = lightColorScheme(
+    primary = OlympiaRed, // Color primario para acciones principales en modo claro.
+    onPrimary = PureWhite, // Texto sobre botones primarios en modo claro.
+    primaryContainer = LightPrimaryLight, // Contenedores resaltados como app bar o tarjetas especiales.
+    onPrimaryContainer = OlympiaBlack, // Texto dentro de contenedores primarios claros.
+    secondary = LightSecondaryText, // Texto secundario y etiquetas en modo claro.
+    onSecondary = LightBackground,
+    background = LightBackground, // Fondo general blanco puro.
+    onBackground = OlympiaBlack, // Texto principal sobre fondo claro.
+    surface = LightSurface, // Superficies de app bar, tarjetas y paneles.
+    onSurface = OlympiaBlack, // Texto principal sobre superficies claras.
+    surfaceVariant = Platinum, // Superficies alternativas para secciones diferenciadas.
+    onSurfaceVariant = IronGray, // Texto secundario sobre superficies alternativas claras.
+    outline = LightBorder, // Bordes y divisores en modo claro.
+    tertiary = LightPrimaryDark, // Tonalidad complementaria para íconos o indicadores activos.
+    onTertiary = PureWhite
 )
 
 @Composable
-fun ProCardAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+fun ProcardTheme(
+    darkTheme: Boolean,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    // Selecciona el esquema de colores acorde al estado del tema.
+    val colorScheme = if (darkTheme) ProcardDarkColorScheme else ProcardLightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = ProcardTypography,
         content = content
     )
 }
