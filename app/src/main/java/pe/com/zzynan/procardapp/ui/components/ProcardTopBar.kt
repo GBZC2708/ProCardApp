@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
@@ -29,13 +29,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.ui.navigation.ProcardScreen
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-// File: app/src/main/java/pe/com/zzynan/procardapp/ui/components/ProcardTopBar.kt
 @Composable
 fun ProcardTopBar(
     currentScreen: ProcardScreen,
@@ -44,20 +44,21 @@ fun ProcardTopBar(
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
-    // Controla la visibilidad del diálogo para editar el nombre del usuario.
     var isNameDialogVisible by rememberSaveable { mutableStateOf(false) }
-    // Almacena temporalmente el valor del nombre dentro del diálogo antes de confirmarlo.
     var pendingName by rememberSaveable { mutableStateOf(userName) }
-    // Formatea la fecha actual en español siguiendo el estilo requerido.
-    val formattedDate = rememberSaveable {
-        val formatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy", Locale("es", "ES"))
+
+    // Fecha compacta en 2 líneas
+    val (dayOfWeek, fullDate) = rememberSaveable {
         val today = LocalDate.now()
-        formatter.format(today).replaceFirstChar { character ->
-            if (character.isLowerCase()) character.titlecase(Locale("es", "ES")) else character.toString()
-        }
+        val dayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale("es", "ES"))
+        val dateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale("es", "ES"))
+
+        val rawDay = dayFormatter.format(today)
+        val capitalizedDay = rawDay.replaceFirstChar { it.titlecase(Locale("es", "ES")) }
+
+        capitalizedDay to dateFormatter.format(today)
     }
 
-    // Mantiene sincronizado el texto editable con el nombre actual al abrir el diálogo.
     LaunchedEffect(isNameDialogVisible) {
         if (isNameDialogVisible) {
             pendingName = userName
@@ -65,115 +66,114 @@ fun ProcardTopBar(
     }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding(),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Bloque izquierdo con fecha y saludo interactivo.
+
+            // IZQUIERDA: Botón tema
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // CENTRO: Greeting más grande
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = formattedDate,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 TextButton(onClick = { isNameDialogVisible = true }) {
                     Text(
                         text = stringResource(id = R.string.greeting_format, userName),
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // Bloque central con título y descripción de la pantalla actual.
+            // DERECHA: Fecha compacta
             Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 Text(
-                    text = currentScreen.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
+                    text = dayOfWeek,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = currentScreen.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    text = fullDate,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            // Bloque derecho con el interruptor de tema claro/oscuro.
-            Row(
-                modifier = Modifier.wrapContentWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onToggleTheme) {
-                    Icon(
-                        imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                        contentDescription = if (isDarkTheme) {
-                            stringResource(id = R.string.light_theme_content_description)
-                        } else {
-                            stringResource(id = R.string.dark_theme_content_description)
-                        },
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
             }
         }
     }
 
+// DIALOGO PARA EDITAR NOMBRE (súper compacto y estrecho)
     if (isNameDialogVisible) {
-        // Diálogo que permite editar y guardar el nombre del usuario.
         AlertDialog(
             onDismissRequest = { isNameDialogVisible = false },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        onUserNameChange(pendingName.ifBlank { userName })
-                        isNameDialogVisible = false
-                    }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = stringResource(id = R.string.save_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { isNameDialogVisible = false }) {
-                    Text(text = stringResource(id = R.string.cancel_action))
+                    TextButton(
+                        onClick = {
+                            onUserNameChange(pendingName.ifBlank { userName })
+                            isNameDialogVisible = false
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.save_action),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             },
             title = {
                 Text(
                     text = stringResource(id = R.string.edit_name_title),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = stringResource(id = R.string.edit_name_support),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     OutlinedTextField(
                         value = pendingName,
-                        onValueChange = { updatedName -> pendingName = updatedName },
-                        singleLine = true
+                        onValueChange = { pendingName = it },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f),    // 👈 más estrecho
                     )
                 }
-            }
+            },
+            modifier = Modifier.fillMaxWidth(0.75f) // 👈 diálogo más angosto aún
         )
     }
+
 }

@@ -18,8 +18,10 @@ import pe.com.zzynan.procardapp.ui.theme.ProcardTheme
 // File: app/src/main/java/pe/com/zzynan/procardapp/ui/ProcardApp.kt
 @Composable
 fun ProcardApp() {
+    // Leer el tema del sistema desde un contexto composable
+    val systemDarkTheme = isSystemInDarkTheme()
     // Controla el estado del tema claro/oscuro y lo guarda tras recomposiciones y recreaciones.
-    var isDarkTheme by rememberSaveable { mutableStateOf(isSystemInDarkTheme()) }
+    var isDarkTheme by rememberSaveable { mutableStateOf(systemDarkTheme) }
     // Controla el nombre del usuario mostrado en la barra superior y lo persiste tras recreaciones.
     var userName by rememberSaveable { mutableStateOf("Atleta") }
     // Controla la navegación entre pantallas usando Navigation Compose.
