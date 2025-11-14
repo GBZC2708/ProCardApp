@@ -7,6 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import pe.com.zzynan.procardapp.ui.components.ProcardBottomNav
@@ -14,6 +17,7 @@ import pe.com.zzynan.procardapp.ui.components.ProcardTopBar
 import pe.com.zzynan.procardapp.ui.navigation.ProcardNavHost
 import pe.com.zzynan.procardapp.ui.navigation.ProcardScreen
 import pe.com.zzynan.procardapp.ui.theme.ProcardTheme
+import pe.com.zzynan.procardapp.ui.viewmodel.TopBarViewModel
 
 // File: app/src/main/java/pe/com/zzynan/procardapp/ui/ProcardApp.kt
 @Composable
@@ -22,17 +26,18 @@ fun ProcardApp() {
     val systemDarkTheme = isSystemInDarkTheme()
     // Controla el estado del tema claro/oscuro y lo guarda tras recomposiciones y recreaciones.
     var isDarkTheme by rememberSaveable { mutableStateOf(systemDarkTheme) }
-    // Controla el nombre del usuario mostrado en la barra superior y lo persiste tras recreaciones.
-    var userName by rememberSaveable { mutableStateOf("Atleta") }
-    // Controla la navegación entre pantallas usando Navigation Compose.
     val navController = rememberNavController()
     val screens = ProcardScreen.allScreens
-    // Obtiene la entrada actual del back stack para reaccionar a cambios de ruta.
     val backStackEntry by navController.currentBackStackEntryAsState()
-    // Determina la pantalla actual a partir de la ruta activa en el NavHost.
     val currentScreen = screens.firstOrNull { screen ->
         screen.route == backStackEntry?.destination?.route
     } ?: ProcardScreen.Registro
+
+    val context = LocalContext.current
+    val topBarViewModel: TopBarViewModel = viewModel(
+        factory = TopBarViewModel.provideFactory(context)
+    )
+    val topBarUiState = topBarViewModel.uiState.collectAsStateWithLifecycle()
 
     ProcardTheme(darkTheme = isDarkTheme) {
         // Estructura raíz de la aplicación que organiza barra superior, contenido y barra inferior.
@@ -41,8 +46,8 @@ fun ProcardApp() {
                 // Barra superior personalizada con saludo, título dinámico y control de tema.
                 ProcardTopBar(
                     currentScreen = currentScreen,
-                    userName = userName,
-                    onUserNameChange = { updatedName -> userName = updatedName },
+                    userName = topBarUiState.value.displayName,
+                    onUserNameChange = topBarViewModel::onUserNameChange,
                     isDarkTheme = isDarkTheme,
                     onToggleTheme = { isDarkTheme = !isDarkTheme }
                 )

@@ -12,9 +12,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
-import pe.com.zzynan.procardapp.data.local.entity.TrainingStage
 import pe.com.zzynan.procardapp.data.local.entity.toDatabaseValue
 import pe.com.zzynan.procardapp.data.repository.DailyMetricsRepository
+import pe.com.zzynan.procardapp.domain.model.TrainingStage
 
 /**
  * ViewModel de ejemplo que demuestra cómo consumir el repositorio en una capa de presentación.

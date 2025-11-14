@@ -9,4 +9,13 @@
     <string name="screen_suplementacion">Suples</string>
     <string name="screen_calculadora">Fórmulas</string>
     <string name="screen_graficos">Gráficos</string>
+    <string name="step_counter_title">Pasos de hoy</string>
+    <string name="step_counter_pause">Pausar</string>
+    <string name="step_counter_resume">Reanudar</string>
+    <string name="step_counter_pause_cd">Pausar contador de pasos</string>
+    <string name="step_counter_resume_cd">Reanudar contador de pasos</string>
+    <string name="step_counter_icon_cd">Ícono de pasos diarios</string>
+    <string name="notification_steps_content">Pasos de hoy: %1$d</string>
+    <string name="daily_steps_saved">Último registro guardado: %1$d pasos</string>
+    <string name="daily_last_update_user">Actualizado para %1$s</string>
 </resources>
