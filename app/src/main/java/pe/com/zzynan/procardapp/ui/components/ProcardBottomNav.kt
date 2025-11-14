@@ -23,6 +23,14 @@ fun ProcardBottomNav(
     Box(
         modifier = Modifier.navigationBarsPadding() // 👈 esto empuja TODO por encima de los 3 botones
     ) {
+        val navigationBarItemColors = NavigationBarItemDefaults.colors(
+            selectedIconColor = MaterialTheme.colorScheme.primary,
+            selectedTextColor = MaterialTheme.colorScheme.primary,
+            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         NavigationBar(
             modifier = Modifier.height(62.dp)        // barra compacta pero visible
         ) {
@@ -39,13 +47,7 @@ fun ProcardBottomNav(
                         Text(text = stringResource(id = screen.labelRes))
                     },
                     alwaysShowLabel = false,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    colors = navigationBarItemColors
                 )
             }
         }

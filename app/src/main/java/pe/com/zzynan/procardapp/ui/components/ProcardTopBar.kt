@@ -36,6 +36,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private val SpanishLocale = Locale("es", "ES")
+private val DayOfWeekFormatter = DateTimeFormatter.ofPattern("EEEE", SpanishLocale)
+private val FullDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", SpanishLocale)
+
 @Composable
 fun ProcardTopBar(
     currentScreen: ProcardScreen,
@@ -50,13 +54,10 @@ fun ProcardTopBar(
     // Fecha compacta en 2 líneas
     val (dayOfWeek, fullDate) = rememberSaveable {
         val today = LocalDate.now()
-        val dayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale("es", "ES"))
-        val dateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", Locale("es", "ES"))
+        val rawDay = DayOfWeekFormatter.format(today)
+        val capitalizedDay = rawDay.replaceFirstChar { it.titlecase(SpanishLocale) }
 
-        val rawDay = dayFormatter.format(today)
-        val capitalizedDay = rawDay.replaceFirstChar { it.titlecase(Locale("es", "ES")) }
-
-        capitalizedDay to dateFormatter.format(today)
+        capitalizedDay to FullDateFormatter.format(today)
     }
 
     LaunchedEffect(isNameDialogVisible) {
@@ -65,12 +66,15 @@ fun ProcardTopBar(
         }
     }
 
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding(),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        color = colorScheme.surface,
+        contentColor = colorScheme.onSurface
     ) {
 
         Row(
@@ -85,7 +89,7 @@ fun ProcardTopBar(
                 Icon(
                     imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = colorScheme.primary
                 )
             }
 
@@ -99,7 +103,7 @@ fun ProcardTopBar(
                         text = stringResource(id = R.string.greeting_format, userName),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -112,13 +116,13 @@ fun ProcardTopBar(
             ) {
                 Text(
                     text = dayOfWeek,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = fullDate,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant
                 )
             }
         }
