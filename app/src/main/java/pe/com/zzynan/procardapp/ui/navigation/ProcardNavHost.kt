@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,6 +16,7 @@ import pe.com.zzynan.procardapp.ui.screens.EntrenamientoScreen
 import pe.com.zzynan.procardapp.ui.screens.GraficosScreen
 import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
 import pe.com.zzynan.procardapp.ui.screens.SuplementacionScreen
+import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
 
 // File: app/src/main/java/pe/com/zzynan/procardapp/ui/navigation/ProcardNavHost.kt
 @Composable
@@ -28,8 +32,15 @@ fun ProcardNavHost(
         modifier = modifier.padding(padding)
     ) {
         composable(ProcardScreen.Registro.route) {
-            // Contenido placeholder para la pantalla de registro.
-            RegistroScreen()
+            val context = LocalContext.current
+            val viewModel: DailyRegisterViewModel = viewModel(
+                factory = DailyRegisterViewModel.provideFactory(context)
+            )
+            val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+            RegistroScreen(
+                uiState = uiState.value,
+                onToggleStepCounter = viewModel::onToggleStepCounter
+            )
         }
         composable(ProcardScreen.Alimentacion.route) {
             // Contenido placeholder para la pantalla de alimentación.
