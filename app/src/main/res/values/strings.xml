@@ -1,12 +1,8 @@
 <resources>
     <string name="app_name">ProCardApp</string>
     <string name="greeting_format">Hola, %1$s</string>
-    <string name="light_theme_content_description">Cambiar a tema claro</string>
-    <string name="dark_theme_content_description">Cambiar a tema oscuro</string>
     <string name="save_action">Guardar</string>
-    <string name="cancel_action">Cancelar</string>
     <string name="edit_name_title">Editar tu nombre</string>
-    <string name="edit_name_support">Actualiza tu nombre o nick para personalizar la experiencia.</string>
     <string name="screen_registro">Registro</string>
     <string name="screen_alimentacion">Comida</string>
     <string name="screen_entrenamiento">Entreno</string>

@@ -26,10 +26,11 @@ fun ProcardApp() {
     var userName by rememberSaveable { mutableStateOf("Atleta") }
     // Controla la navegación entre pantallas usando Navigation Compose.
     val navController = rememberNavController()
+    val screens = ProcardScreen.allScreens
     // Obtiene la entrada actual del back stack para reaccionar a cambios de ruta.
     val backStackEntry by navController.currentBackStackEntryAsState()
     // Determina la pantalla actual a partir de la ruta activa en el NavHost.
-    val currentScreen = ProcardScreen.allScreens.firstOrNull { screen ->
+    val currentScreen = screens.firstOrNull { screen ->
         screen.route == backStackEntry?.destination?.route
     } ?: ProcardScreen.Registro
 
@@ -49,7 +50,7 @@ fun ProcardApp() {
             bottomBar = {
                 // Barra de navegación inferior que permite cambiar entre pantallas principales.
                 ProcardBottomNav(
-                    screens = ProcardScreen.allScreens,
+                    screens = screens,
                     currentDestination = currentScreen,
                     onNavigate = { destination ->
                         navController.navigate(destination.route) {
