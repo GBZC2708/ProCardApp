@@ -31,6 +31,8 @@ import pe.com.zzynan.procardapp.domain.model.UserProfile
 import pe.com.zzynan.procardapp.domain.usecase.GetTodayMetricsUseCase
 import pe.com.zzynan.procardapp.domain.usecase.ObserveUserProfileUseCase
 import pe.com.zzynan.procardapp.domain.usecase.SaveDailyStepsUseCase
+import android.widget.RemoteViews
+
 
 /**
  * Servicio en primer plano que mantiene el conteo de pasos aun cuando la app está cerrada.
@@ -162,12 +164,21 @@ class StepCounterService : Service(), SensorEventListener {
     }
 
     private fun requestInitialLoad() {
-        if (!hasLoadedInitialMetrics) {
-            serviceScope.launch { loadStepsForCurrentUser() }
-        } else {
-            updateNotification()
+        serviceScope.launch {
+            // 1) Cargar los pasos del usuario actual para hoy
+            loadStepsForCurrentUser()
+
+            // 2) Si el contador NO está corriendo, lo arrancamos automáticamente
+            if (!StepCounterStateHolder.state.value.isRunning) {
+                startCounter()
+            } else {
+                // Si ya está corriendo, solo actualizamos la notificación
+                updateNotification()
+            }
         }
     }
+
+
 
     private fun observeProfileChanges() {
         serviceScope.launch {
@@ -277,6 +288,7 @@ class StepCounterService : Service(), SensorEventListener {
     }
 
     private fun buildNotification(state: StepCounterState): Notification {
+
         val openIntent = PendingIntent.getActivity(
             this,
             REQUEST_OPEN_APP,
@@ -293,23 +305,38 @@ class StepCounterService : Service(), SensorEventListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val actionText = if (state.isRunning) {
-            getString(R.string.step_counter_pause)
-        } else {
-            getString(R.string.step_counter_resume)
+        val toggleIcon =
+            if (state.isRunning) R.drawable.ic_pause
+            else R.drawable.ic_play_arrow
+
+        val toggleCd =
+            if (state.isRunning) getString(R.string.step_counter_pause_cd)
+            else getString(R.string.step_counter_resume_cd)
+
+        val contentView = RemoteViews(packageName, R.layout.notification_steps_simple).apply {
+            setTextViewText(R.id.textSteps, state.stepsToday.toString())
+            setImageViewResource(R.id.iconSteps, R.drawable.ic_directions_walk)
+
+            setImageViewResource(R.id.btnToggle, toggleIcon)
+            setContentDescription(R.id.btnToggle, toggleCd)
+            setOnClickPendingIntent(R.id.btnToggle, toggleIntent)
         }
-        val actionIcon = if (state.isRunning) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_steps_content, state.stepsToday))
+            .setSmallIcon(R.mipmap.ic_launcher) // icono de la app
+            .setCustomContentView(contentView)
+            // Para que no intente expandir a algo más grande:
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setContentIntent(openIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(actionIcon, actionText, toggleIntent)
             .build()
+
     }
+
+
+
+
 
     companion object {
         const val ACTION_INITIALIZE = "pe.com.zzynan.procardapp.core.steps.ACTION_INITIALIZE"

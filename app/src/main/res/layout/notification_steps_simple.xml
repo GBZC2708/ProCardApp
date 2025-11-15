@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="8dp">
+
+    <!-- Bloque: pasos + icono -->
+    <LinearLayout
+        android:id="@+id/stepsRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/textSteps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white" />
+
+        <ImageView
+            android:id="@+id/iconSteps"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_directions_walk"
+            android:tint="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Botón play/pause MUCHO más compacto -->
+    <ImageButton
+        android:id="@+id/btnToggle"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:padding="2dp"
+        android:src="@android:drawable/ic_media_pause"
+        android:tint="@android:color/white"
+        android:contentDescription="play_pause" />
+</LinearLayout>

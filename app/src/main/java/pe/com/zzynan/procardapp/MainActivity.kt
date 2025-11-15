@@ -10,6 +10,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import pe.com.zzynan.procardapp.ui.ProcardApp
+import pe.com.zzynan.procardapp.core.steps.StepCounterManager
+
 
 // File: app/src/main/java/pe/com/zzynan/procardapp/MainActivity.kt
 class MainActivity : ComponentActivity() {
@@ -19,6 +21,9 @@ class MainActivity : ComponentActivity() {
 
         // Pide el permiso de actividad física solo si es necesario (Android 10+).
         requestActivityRecognitionPermissionIfNeeded()
+
+        // 🔹 Inicia (o asegura) el servicio del contador de pasos
+        StepCounterManager(this).ensureServiceRunning()
 
         // Activa el modo edge-to-edge para aprovechar todo el espacio disponible en pantalla.
         enableEdgeToEdge()
