@@ -39,6 +39,8 @@ fun WeightCard(
     onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val weightValueCd = stringResource(id = R.string.weight_value_cd)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -60,7 +62,7 @@ fun WeightCard(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .semantics { contentDescription = stringResource(id = R.string.weight_value_cd) }
+                    .semantics { contentDescription = weightValueCd }
                     .clickable(role = Role.Button, onClick = onValueClick),
                 verticalArrangement = Arrangement.Center
             ) {
@@ -97,3 +99,4 @@ fun WeightCard(
         }
     }
 }
+
