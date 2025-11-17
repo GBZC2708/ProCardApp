@@ -19,10 +19,12 @@
     <string name="daily_steps_saved">Último registro guardado: %1$d pasos</string>
     <string name="daily_last_update_user">Actualizado para %1$s</string>
     <string name="weight_title">Peso en ayunas</string>
-    <string name="weight_status_label">Estado: %1$s</string>
-    <string name="weight_supporting_text">Ingresa tu peso con 2 decimales</string>
-    <string name="weight_history_button">Historial</string>
     <string name="weight_icon_cd">Ícono de peso en ayunas</string>
+    <string name="weight_history_icon_cd">Abrir historial de peso</string>
+    <string name="weight_value_cd">Editar peso en ayunas</string>
+    <string name="weight_status_saved">Hoy guardado</string>
+    <string name="weight_status_pending">Hoy pendiente</string>
+    <string name="weight_saved_message">Peso guardado</string>
     <string name="weight_chart_title">Peso últimos 7 días</string>
     <string name="steps_chart_title">Pasos últimos 7 días</string>
 </resources>

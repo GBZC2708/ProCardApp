@@ -5,23 +5,27 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.core.di.ServiceLocator
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.core.steps.StepCounterManager
 import pe.com.zzynan.procardapp.core.steps.StepCounterState
+import pe.com.zzynan.procardapp.domain.model.DailyMetrics
 import pe.com.zzynan.procardapp.domain.model.UserProfile
 import pe.com.zzynan.procardapp.domain.usecase.GetLastWeightOnOrBeforeUseCase
 import pe.com.zzynan.procardapp.domain.usecase.GetTodayMetricsUseCase
@@ -32,6 +36,7 @@ import pe.com.zzynan.procardapp.ui.mappers.toUiModel
 import pe.com.zzynan.procardapp.ui.model.StepCounterUiModel
 import pe.com.zzynan.procardapp.ui.model.WeightCardUiModel
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
+import pe.com.zzynan.procardapp.ui.model.WeightStatus
 import pe.com.zzynan.procardapp.ui.model.WeeklyMetricsUiModel
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
@@ -54,7 +59,8 @@ class DailyRegisterViewModel(
     private val historyDateFlow = MutableStateFlow(LocalDate.now())
     private val isHistoryVisibleFlow = MutableStateFlow(false)
     private val historyWeightTextFlow = MutableStateFlow("")
-    private val todayWeightTextFlow = MutableStateFlow("")
+    private val historyPlaceholderFlow = MutableStateFlow<String?>(null)
+    private val eventsFlow = MutableSharedFlow<UiEvent>()
 
     private val profileFlow = observeUserProfileUseCase()
         .stateIn(
@@ -70,68 +76,54 @@ class DailyRegisterViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    private val historyMetricsFlow = profileFlow
-        .combine(historyDateFlow) { profile, date -> profile.displayName to date.toEpochDayLong() }
-        .flatMapLatest { (username, epochDay) ->
-            getTodayMetricsUseCase.observe(username, epochDay)
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    private val weeklyMetricsFlow = profileFlow
+    private val recentMetricsFlow = profileFlow
         .combine(todayFlow) { profile, today -> profile.displayName to today.toEpochDayLong() }
         .flatMapLatest { (username, endDate) ->
-            observeWeeklyMetricsUseCase(username, endDate)
+            observeWeeklyMetricsUseCase(username, endDate, days = 30)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val stepStateFlow = stepCounterManager.observeState()
 
-    private val weightCardFlow: StateFlow<WeightCardUiModel> = profileFlow
-        .combine(metricsFlow) { profile, metrics -> profile.displayName to metrics }
-        .combine(todayFlow) { (username, metrics), today -> Triple(username, metrics, today) }
-        .combine(todayWeightTextFlow) { (username, metrics, today), input ->
-            WeightCardSource(username = username, metrics = metrics, today = today, input = input)
-        }
-        .mapLatest { source ->
-            val todayWeight = source.metrics?.weightFasted ?: 0f
-            val savedToday = todayWeight > 0f
-            val fallback = if (savedToday) {
-                todayWeight
-            } else {
-                getLastWeightOnOrBeforeUseCase(
-                    source.username,
-                    source.today.minusDays(1).toEpochDayLong()
-                ) ?: 0f
-            }
-            WeightCardUiModel(
-                value = if (source.input.isNotEmpty()) {
-                    source.input
-                } else if (savedToday) {
-                    formatWeight(todayWeight)
-                } else {
-                    ""
-                },
-                placeholder = if (!savedToday && fallback > 0f) formatWeight(fallback) else null,
-                statusLabel = if (savedToday) "Hoy guardado" else "Hoy pendiente",
-                isSavedToday = savedToday
+    private val weightCardFlow: StateFlow<WeightCardUiModel> = combine(
+        metricsFlow,
+        recentMetricsFlow,
+        todayFlow,
+        profileFlow
+    ) { metrics, recent, today, profile ->
+        val todayWeight = metrics?.weightFasted?.takeIf { it > 0f }
+        val fallback = if (todayWeight == null) {
+            lastWeightBefore(today, recent) ?: getLastWeightOnOrBeforeUseCase(
+                profile.displayName,
+                today.minusDays(1).toEpochDayLong()
             )
+        } else {
+            null
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = WeightCardUiModel()
+        val display = todayWeight ?: fallback ?: 0f
+        WeightCardUiModel(
+            displayValue = formatWeight(display),
+            status = if (todayWeight != null) WeightStatus.Saved else WeightStatus.Pending,
+            hasFallback = fallback != null && todayWeight == null
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = WeightCardUiModel()
+    )
 
     private val weightEditorFlow: StateFlow<WeightEditorUiModel> = combine(
         isHistoryVisibleFlow,
         historyDateFlow,
         historyWeightTextFlow,
+        historyPlaceholderFlow,
         todayFlow
-    ) { visible, date, text, today ->
+    ) { visible, date, text, placeholder, today ->
         WeightEditorUiModel(
             isVisible = visible,
             selectedDate = date,
             weightText = text,
+            placeholder = placeholder,
             canNavigateNext = date.isBefore(today)
         )
     }.stateIn(
@@ -141,7 +133,7 @@ class DailyRegisterViewModel(
     )
 
     private val weeklyUiFlow: StateFlow<WeeklyMetricsUiModel> = combine(
-        weeklyMetricsFlow,
+        recentMetricsFlow,
         todayFlow
     ) { metrics, today ->
         val startDate = today.minusDays(6)
@@ -198,6 +190,8 @@ class DailyRegisterViewModel(
             initialValue = DailyRegisterUiState()
         )
 
+    val events = eventsFlow.asSharedFlow()
+
 
 
     init {
@@ -212,17 +206,8 @@ class DailyRegisterViewModel(
             }
         }
         viewModelScope.launch {
-            metricsFlow.collect { metrics ->
-                todayWeightTextFlow.value = metrics?.weightFasted?.takeIf { it > 0f }
-                    ?.let { formatWeight(it) }
-                    ?: ""
-            }
-        }
-        viewModelScope.launch {
-            historyMetricsFlow.collect { metrics ->
-                historyWeightTextFlow.value = metrics?.weightFasted?.takeIf { it > 0f }
-                    ?.let { formatWeight(it) }
-                    ?: ""
+            historyDateFlow.collect { date ->
+                syncHistoryForDate(date)
             }
         }
     }
@@ -231,61 +216,124 @@ class DailyRegisterViewModel(
         stepCounterManager.toggle()
     }
 
-    fun onWeightValueChanged(value: String) {
-        val sanitized = sanitizeInput(value)
-        todayWeightTextFlow.value = sanitized
-        persistWeightForDate(sanitized, todayFlow.value)
-    }
-
     fun onOpenHistory(date: LocalDate = todayFlow.value) {
-        historyDateFlow.value = date
-        isHistoryVisibleFlow.value = true
+        viewModelScope.launch {
+            val target = date.coerceAtMost(todayFlow.value)
+            historyDateFlow.value = target
+            syncHistoryForDate(target)
+            isHistoryVisibleFlow.value = true
+        }
     }
 
     fun onDismissHistory() {
-        isHistoryVisibleFlow.value = false
+        onConfirmHistory()
     }
 
     fun onHistoryPreviousDay() {
-        historyDateFlow.value = historyDateFlow.value.minusDays(1)
+        viewModelScope.launch {
+            saveHistoryForCurrentDate()
+            historyDateFlow.value = historyDateFlow.value.minusDays(1)
+        }
     }
 
     fun onHistoryNextDay() {
-        if (historyDateFlow.value.isBefore(todayFlow.value)) {
-            historyDateFlow.value = historyDateFlow.value.plusDays(1)
+        viewModelScope.launch {
+            saveHistoryForCurrentDate()
+            if (historyDateFlow.value.isBefore(todayFlow.value)) {
+                historyDateFlow.value = historyDateFlow.value.plusDays(1)
+            }
         }
     }
 
     fun onHistoryWeightChanged(value: String) {
-        val sanitized = sanitizeInput(value)
-        historyWeightTextFlow.value = sanitized
-        persistWeightForDate(sanitized, historyDateFlow.value)
+        historyWeightTextFlow.value = sanitizeInput(value, historyWeightTextFlow.value)
     }
 
     fun onChartWeightSelected(date: LocalDate) {
-        historyDateFlow.value = date
-        isHistoryVisibleFlow.value = true
+        onOpenHistory(date)
     }
 
-    private fun persistWeightForDate(value: String, date: LocalDate) {
-        val weightValue = value.toFloatOrNull() ?: return
+    fun onConfirmHistory() {
         viewModelScope.launch {
-            val username = profileFlow.value.displayName
-            saveDailyWeightUseCase(username, date.toEpochDayLong(), weightValue)
+            saveHistoryForCurrentDate()
+            isHistoryVisibleFlow.value = false
         }
+    }
+
+    private suspend fun syncHistoryForDate(date: LocalDate) {
+        val savedWeight = weightForDate(date)
+        val fallback = if (savedWeight == null && date == todayFlow.value) {
+            lastWeightBefore(date, recentMetricsFlow.value) ?: getLastWeightOnOrBeforeUseCase(
+                profileFlow.value.displayName,
+                date.minusDays(1).toEpochDayLong()
+            )
+        } else {
+            null
+        }
+        if (savedWeight != null) {
+            historyWeightTextFlow.value = formatWeight(savedWeight)
+            historyPlaceholderFlow.value = null
+        } else {
+            val fallbackText = fallback?.let { formatWeight(it) }
+            historyWeightTextFlow.value = fallbackText ?: ""
+            historyPlaceholderFlow.value = fallbackText
+        }
+    }
+
+    private suspend fun saveHistoryForCurrentDate() {
+        val parsedWeight = parseWeight(historyWeightTextFlow.value) ?: return
+        val rounded = parsedWeight.toBigDecimal().setScale(2, RoundingMode.HALF_UP).toFloat()
+        persistWeightForDate(rounded, historyDateFlow.value)
+        historyWeightTextFlow.value = formatWeight(rounded)
+    }
+
+    private suspend fun persistWeightForDate(weight: Float, date: LocalDate) {
+        saveDailyWeightUseCase(profileFlow.value.displayName, date.toEpochDayLong(), weight)
+        eventsFlow.emit(UiEvent.ShowMessage(R.string.weight_saved_message))
+    }
+
+    private suspend fun weightForDate(date: LocalDate): Float? {
+        val cached = recentMetricsFlow.value.firstOrNull { it.dateEpoch == date.toEpochDayLong() }
+            ?.weightFasted
+            ?.takeIf { it > 0f }
+        if (cached != null) return cached
+        val todayMetrics = metricsFlow.value?.takeIf { date == todayFlow.value }
+            ?.weightFasted
+            ?.takeIf { it > 0f }
+        if (todayMetrics != null) return todayMetrics
+        return getTodayMetricsUseCase.current(profileFlow.value.displayName, date.toEpochDayLong())
+            ?.weightFasted
+            ?.takeIf { it > 0f }
+    }
+
+    private fun lastWeightBefore(date: LocalDate, recent: List<DailyMetrics>): Float? {
+        val targetEpoch = date.minusDays(1).toEpochDayLong()
+        return recent
+            .filter { it.dateEpoch <= targetEpoch && it.weightFasted > 0f }
+            .maxByOrNull { it.dateEpoch }
+            ?.weightFasted
+    }
+
+    private fun parseWeight(value: String): Float? {
+        if (value.isBlank()) return null
+        val normalized = value.replace(',', '.').trimEnd('.')
+        if (!weightInputRegex.matches(normalized)) return null
+        return normalized.toBigDecimalOrNull()?.toFloat()
     }
 
     private fun formatWeight(value: Float): String =
         String.format(Locale.US, "%.2f", value)
 
-    private fun sanitizeInput(value: String): String = value.replace(",", ".")
+    private fun sanitizeInput(value: String, previous: String): String {
+        val normalized = value.replace(',', '.')
+        return if (weightInputRegex.matches(normalized)) normalized else previous
+    }
 
-    private data class WeightCardSource(
-        val username: String,
-        val metrics: pe.com.zzynan.procardapp.domain.model.DailyMetrics?,
-        val today: LocalDate,
-        val input: String
-    )
+    private val weightInputRegex = Regex("^\\d*(?:\\.\\d{0,2})?$")
+
+    sealed class UiEvent {
+        data class ShowMessage(val messageRes: Int) : UiEvent()
+    }
 
     companion object {
         fun provideFactory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
