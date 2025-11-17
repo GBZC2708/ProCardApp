@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -55,7 +56,6 @@ fun RegistroScreen(
         WeightCard(
             uiModel = uiState.weightCard,
             onValueClick = { onOpenHistory(LocalDate.now()) },
-            onHistoryClick = { onOpenHistory(LocalDate.now()) },
             modifier = Modifier.fillMaxWidth()
         )
         uiState.metrics?.let { metrics ->
@@ -114,14 +114,20 @@ fun GraficosScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(horizontalScrollState),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .horizontalScroll(horizontalScrollState)
         ) {
-            StepsLineChart(points = uiState.weeklyMetrics.stepsPoints)
-            WeightLineChart(
-                points = uiState.weeklyMetrics.weightPoints,
-                onPointSelected = onWeightPointSelected
-            )
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .widthIn(min = 640.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                WeightLineChart(
+                    points = uiState.weeklyMetrics.weightPoints,
+                    onPointSelected = onWeightPointSelected
+                )
+                StepsLineChart(points = uiState.weeklyMetrics.stepsPoints)
+            }
         }
     }
 

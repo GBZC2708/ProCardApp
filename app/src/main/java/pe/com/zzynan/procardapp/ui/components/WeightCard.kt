@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +34,6 @@ import pe.com.zzynan.procardapp.ui.model.WeightStatus
 fun WeightCard(
     uiModel: WeightCardUiModel,
     onValueClick: () -> Unit,
-    onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val weightValueCd = stringResource(id = R.string.weight_value_cd)
@@ -87,13 +84,6 @@ fun WeightCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-            IconButton(onClick = onHistoryClick) {
-                Icon(
-                    imageVector = Icons.Filled.History,
-                    contentDescription = stringResource(id = R.string.weight_history_icon_cd),
-                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
