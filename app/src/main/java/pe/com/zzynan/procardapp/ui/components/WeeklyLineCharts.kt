@@ -30,6 +30,8 @@ import kotlin.math.roundToInt
 import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
+import androidx.compose.ui.graphics.nativeCanvas
+
 
 private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
 
@@ -113,9 +115,16 @@ private fun LineChart(
     val maxValue = (points.maxOrNull() ?: 0f).coerceAtLeast(1f)
     val minValue = points.minOrNull() ?: 0f
     val range = (maxValue - minValue).takeIf { it > 0f } ?: 1f
+
+    // Saca los colores del MaterialTheme ANTES del Canvas
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+
     val textPaint = Paint().apply {
-        color = MaterialTheme.colorScheme.onSurface.toArgb()
+        color = onSurfaceColor.toArgb()
         textSize = 28f
+        isAntiAlias = true
     }
 
     Canvas(
@@ -125,17 +134,22 @@ private fun LineChart(
             .pointerInput(points, labels) {
                 detectTapGestures { offset ->
                     if (points.isNotEmpty()) {
-                        val segment = if (points.size > 1) size.width / (points.size - 1) else size.width
-                        val index = (offset.x / segment).roundToInt().coerceIn(points.indices)
+                        val segment =
+                            if (points.size > 1) size.width / (points.size - 1) else size.width
+                        val index = (offset.x / segment)
+                            .roundToInt()
+                            .coerceIn(points.indices)
                         onPointSelected(index)
                     }
                 }
             }
     ) {
         if (points.isEmpty()) return@Canvas
+
         val chartHeight = size.height
         val chartWidth = size.width
         val xStep = if (points.size > 1) chartWidth / (points.size - 1) else chartWidth
+
         val path = Path()
         val positions = points.mapIndexed { index, value ->
             val x = xStep * index
@@ -151,22 +165,24 @@ private fun LineChart(
 
         drawPath(
             path = path,
-            color = MaterialTheme.colorScheme.primary,
+            color = primaryColor,
             style = Stroke(width = 6f, cap = StrokeCap.Round)
         )
 
         positions.forEachIndexed { index, point ->
             drawCircle(
-                color = MaterialTheme.colorScheme.secondary,
+                color = secondaryColor,
                 radius = 10f,
                 center = point
             )
+
             drawContext.canvas.nativeCanvas.drawText(
                 valueLabel(points[index]),
                 point.x,
                 point.y - 12f,
                 textPaint
             )
+
             val label = labels.getOrNull(index)
             if (label != null) {
                 drawContext.canvas.nativeCanvas.drawText(
@@ -179,6 +195,7 @@ private fun LineChart(
         }
     }
 }
+
 
 private fun Color.toArgb(): Int = android.graphics.Color.argb(
     (alpha * 255).toInt(),

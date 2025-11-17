@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import pe.com.zzynan.procardapp.core.di.ServiceLocator
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.core.steps.StepCounterManager
+import pe.com.zzynan.procardapp.core.steps.StepCounterState
 import pe.com.zzynan.procardapp.domain.model.UserProfile
 import pe.com.zzynan.procardapp.domain.usecase.GetLastWeightOnOrBeforeUseCase
 import pe.com.zzynan.procardapp.domain.usecase.GetTodayMetricsUseCase
@@ -35,6 +36,7 @@ import pe.com.zzynan.procardapp.ui.model.WeeklyMetricsUiModel
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
 import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
+
 
 /**
  * ViewModel de la pantalla de registro diario. Orquesta pasos, métricas y nombre del usuario.
@@ -161,32 +163,42 @@ class DailyRegisterViewModel(
         initialValue = WeeklyMetricsUiModel()
     )
 
-    val uiState: StateFlow<DailyRegisterUiState> = combine(
-        profileFlow,
-        metricsFlow,
-        stepStateFlow,
-        weightCardFlow,
-        weightEditorFlow,
-        weeklyUiFlow
-    ) { profile, metrics, stepState, weightCard, weightEditor, weeklyUi ->
-        DailyRegisterUiState(
-            userName = profile.displayName,
-            dateEpoch = todayFlow.value.toEpochDayLong(),
-            stepCounter = StepCounterUiModel(
-                stepsToday = stepState.stepsToday,
-                isRunning = stepState.isRunning
-            ),
-            metrics = metrics?.toUiModel(),
-            weightCard = weightCard,
-            weightEditor = weightEditor,
-            weeklyMetrics = weeklyUi,
-            isLoading = false
+    val uiState: StateFlow<DailyRegisterUiState> =
+        combine(
+            profileFlow,
+            metricsFlow,
+            stepStateFlow,
+            weightCardFlow,
+            weightEditorFlow,
+            weeklyUiFlow
+        ) { values ->
+            val profile = values[0] as UserProfile
+            val metrics = values[1] as pe.com.zzynan.procardapp.domain.model.DailyMetrics?
+            val stepState = values[2] as StepCounterState
+            val weightCard = values[3] as WeightCardUiModel
+            val weightEditor = values[4] as WeightEditorUiModel
+            val weeklyUi = values[5] as WeeklyMetricsUiModel
+
+            DailyRegisterUiState(
+                userName = profile.displayName,
+                dateEpoch = todayFlow.value.toEpochDayLong(),
+                stepCounter = StepCounterUiModel(
+                    stepsToday = stepState.stepsToday,
+                    isRunning = stepState.isRunning
+                ),
+                metrics = metrics?.toUiModel(),
+                weightCard = weightCard,
+                weightEditor = weightEditor,
+                weeklyMetrics = weeklyUi,
+                isLoading = false
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = DailyRegisterUiState()
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = DailyRegisterUiState()
-    )
+
+
 
     init {
         stepCounterManager.ensureServiceRunning()
