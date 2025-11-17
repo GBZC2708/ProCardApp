@@ -9,5 +9,6 @@ data class WeightEditorUiModel(
     val isVisible: Boolean = false,
     val selectedDate: LocalDate = LocalDate.now(),
     val weightText: String = "",
+    val placeholder: String? = null,
     val canNavigateNext: Boolean = false
 )

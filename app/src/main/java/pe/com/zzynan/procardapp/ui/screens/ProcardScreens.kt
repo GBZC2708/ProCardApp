@@ -3,16 +3,19 @@ package pe.com.zzynan.procardapp.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -29,12 +32,12 @@ import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
 fun RegistroScreen(
     uiState: DailyRegisterUiState,
     onToggleStepCounter: () -> Unit,
-    onWeightChange: (String) -> Unit,
     onOpenHistory: (LocalDate) -> Unit,
     onDismissHistory: () -> Unit,
     onPreviousHistory: () -> Unit,
     onNextHistory: () -> Unit,
     onHistoryWeightChange: (String) -> Unit,
+    onConfirmHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -51,8 +54,8 @@ fun RegistroScreen(
         )
         WeightCard(
             uiModel = uiState.weightCard,
-            onWeightChange = onWeightChange,
-            onOpenHistory = { onOpenHistory(LocalDate.now()) },
+            onValueClick = { onOpenHistory(LocalDate.now()) },
+            onHistoryClick = { onOpenHistory(LocalDate.now()) },
             modifier = Modifier.fillMaxWidth()
         )
         uiState.metrics?.let { metrics ->
@@ -82,6 +85,7 @@ fun RegistroScreen(
         onDismiss = onDismissHistory,
         onPrevious = onPreviousHistory,
         onNext = onNextHistory,
+        onSave = onConfirmHistory,
         onWeightChange = onHistoryWeightChange
     )
 }
@@ -94,20 +98,31 @@ fun GraficosScreen(
     onPreviousHistory: () -> Unit,
     onNextHistory: () -> Unit,
     onHistoryWeightChange: (String) -> Unit,
+    onConfirmHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val horizontalScrollState = rememberScrollState()
+    LaunchedEffect(uiState.weeklyMetrics) {
+        horizontalScrollState.scrollTo(horizontalScrollState.maxValue)
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 16.dp)
     ) {
-        WeightLineChart(
-            points = uiState.weeklyMetrics.weightPoints,
-            onPointSelected = onWeightPointSelected
-        )
-        StepsLineChart(points = uiState.weeklyMetrics.stepsPoints)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(horizontalScrollState),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            StepsLineChart(points = uiState.weeklyMetrics.stepsPoints)
+            WeightLineChart(
+                points = uiState.weeklyMetrics.weightPoints,
+                onPointSelected = onWeightPointSelected
+            )
+        }
     }
 
     WeightHistoryDialog(
@@ -115,6 +130,7 @@ fun GraficosScreen(
         onDismiss = onDismissHistory,
         onPrevious = onPreviousHistory,
         onNext = onNextHistory,
+        onSave = onConfirmHistory,
         onWeightChange = onHistoryWeightChange
     )
 }

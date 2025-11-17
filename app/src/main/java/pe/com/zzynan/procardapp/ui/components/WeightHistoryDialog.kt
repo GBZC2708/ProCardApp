@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -19,12 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
 
 /**
@@ -36,6 +39,7 @@ fun WeightHistoryDialog(
     onDismiss: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onSave: () -> Unit,
     onWeightChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -62,7 +66,9 @@ fun WeightHistoryDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = uiModel.selectedDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")),
+                    text = uiModel.selectedDate.format(
+                        DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", Locale("es"))
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
                 )
@@ -76,7 +82,16 @@ fun WeightHistoryDialog(
                         textAlign = TextAlign.Center
                     ),
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    placeholder = {
+                        uiModel.placeholder?.let {
+                            Text(text = it, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { onSave() })
                 )
 
                 Row(

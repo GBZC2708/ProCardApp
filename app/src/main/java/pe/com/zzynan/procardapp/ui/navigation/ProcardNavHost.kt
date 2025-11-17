@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -24,6 +26,7 @@ import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
 fun ProcardNavHost(
     navController: NavHostController,
     padding: PaddingValues,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     // NavHost que gestiona las rutas principales aplicando el padding del Scaffold.
@@ -38,15 +41,24 @@ fun ProcardNavHost(
                 factory = DailyRegisterViewModel.provideFactory(context)
             )
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(viewModel) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is DailyRegisterViewModel.UiEvent.ShowMessage -> {
+                            snackbarHostState.showSnackbar(context.getString(event.messageRes))
+                        }
+                    }
+                }
+            }
             RegistroScreen(
                 uiState = uiState.value,
                 onToggleStepCounter = viewModel::onToggleStepCounter,
-                onWeightChange = viewModel::onWeightValueChanged,
                 onOpenHistory = viewModel::onOpenHistory,
                 onDismissHistory = viewModel::onDismissHistory,
                 onPreviousHistory = viewModel::onHistoryPreviousDay,
                 onNextHistory = viewModel::onHistoryNextDay,
-                onHistoryWeightChange = viewModel::onHistoryWeightChanged
+                onHistoryWeightChange = viewModel::onHistoryWeightChanged,
+                onConfirmHistory = viewModel::onConfirmHistory
             )
         }
         composable(ProcardScreen.Alimentacion.route) {
@@ -75,13 +87,23 @@ fun ProcardNavHost(
                 factory = DailyRegisterViewModel.provideFactory(context)
             )
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(viewModel) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is DailyRegisterViewModel.UiEvent.ShowMessage -> {
+                            snackbarHostState.showSnackbar(context.getString(event.messageRes))
+                        }
+                    }
+                }
+            }
             GraficosScreen(
                 uiState = uiState.value,
                 onWeightPointSelected = viewModel::onChartWeightSelected,
                 onDismissHistory = viewModel::onDismissHistory,
                 onPreviousHistory = viewModel::onHistoryPreviousDay,
                 onNextHistory = viewModel::onHistoryNextDay,
-                onHistoryWeightChange = viewModel::onHistoryWeightChanged
+                onHistoryWeightChange = viewModel::onHistoryWeightChanged,
+                onConfirmHistory = viewModel::onConfirmHistory
             )
         }
     }

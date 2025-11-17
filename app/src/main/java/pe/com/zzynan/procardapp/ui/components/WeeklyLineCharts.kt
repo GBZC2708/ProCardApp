@@ -1,8 +1,8 @@
 package pe.com.zzynan.procardapp.ui.components
 
 import android.graphics.Paint
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,20 +20,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
-import androidx.compose.ui.graphics.nativeCanvas
 
-
-private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+private val chartHeight = 160.dp
+private const val H_PADDING = 28f
+private const val V_PADDING = 24f
 
 @Composable
 fun WeightLineChart(
@@ -59,13 +59,11 @@ fun WeightLineChart(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            LineChart(
-                points = points.map { it.weight ?: 0f },
-                labels = points.map { it.date.format(dateFormatter) },
-                onPointSelected = { index ->
-                    points.getOrNull(index)?.date?.let(onPointSelected)
-                },
-                valueLabel = { value -> String.format("%.2f", value) }
+            CompactLineChart(
+                values = points.map { it.weight },
+                dates = points.map { it.date },
+                onPointSelected = { index -> points.getOrNull(index)?.date?.let(onPointSelected) },
+                valueFormatter = { value -> String.format("%.2f", value) }
             )
         }
     }
@@ -94,101 +92,129 @@ fun StepsLineChart(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            LineChart(
-                points = points.map { it.steps.toFloat() },
-                labels = points.map { it.date.format(dateFormatter) },
-                onPointSelected = {},
-                valueLabel = { value -> value.roundToInt().toString() }
+            CompactLineChart(
+                values = points.map { it.steps.toFloat() },
+                dates = points.map { it.date },
+                onPointSelected = null,
+                valueFormatter = { value -> value.toInt().toString() }
             )
         }
     }
 }
 
 @Composable
-private fun LineChart(
-    points: List<Float>,
-    labels: List<String>,
-    onPointSelected: (Int) -> Unit,
-    valueLabel: (Float) -> String,
+private fun CompactLineChart(
+    values: List<Float?>,
+    dates: List<LocalDate>,
+    onPointSelected: ((Int) -> Unit)?,
+    valueFormatter: (Float) -> String,
     modifier: Modifier = Modifier
 ) {
-    val maxValue = (points.maxOrNull() ?: 0f).coerceAtLeast(1f)
-    val minValue = points.minOrNull() ?: 0f
-    val range = (maxValue - minValue).takeIf { it > 0f } ?: 1f
-
-    // Saca los colores del MaterialTheme ANTES del Canvas
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val colors = MaterialTheme.colorScheme
+    val onSurfaceColor = colors.onSurface
+    val primaryColor = colors.primary
+    val secondaryColor = colors.secondary
 
     val textPaint = Paint().apply {
         color = onSurfaceColor.toArgb()
-        textSize = 28f
+        textSize = 26f
         isAntiAlias = true
     }
 
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(180.dp)
-            .pointerInput(points, labels) {
+            .height(chartHeight)
+            .pointerInput(values, dates, onPointSelected) {
+                if (onPointSelected == null || values.isEmpty()) return@pointerInput
                 detectTapGestures { offset ->
-                    if (points.isNotEmpty()) {
-                        val segment =
-                            if (points.size > 1) size.width / (points.size - 1) else size.width
-                        val index = (offset.x / segment)
-                            .roundToInt()
-                            .coerceIn(points.indices)
-                        onPointSelected(index)
-                    }
+                    val effectiveWidth = size.width - (H_PADDING * 2)
+                    val step = if (values.size > 1) effectiveWidth / (values.size - 1) else effectiveWidth
+                    val clampedX = (offset.x - H_PADDING).coerceIn(0f, effectiveWidth)
+                    val index = if (step == 0f) 0 else (clampedX / step).toInt().coerceIn(values.indices)
+                    onPointSelected(index)
                 }
             }
     ) {
-        if (points.isEmpty()) return@Canvas
+        if (values.isEmpty()) return@Canvas
 
-        val chartHeight = size.height
-        val chartWidth = size.width
-        val xStep = if (points.size > 1) chartWidth / (points.size - 1) else chartWidth
-
-        val path = Path()
-        val positions = points.mapIndexed { index, value ->
-            val x = xStep * index
-            val normalized = (value - minValue) / range
-            val y = chartHeight - (normalized * chartHeight)
-            Offset(x, y)
+        val availableValues = values.filterNotNull()
+        if (availableValues.isEmpty()) {
+            dates.forEachIndexed { index, _ ->
+                val x = H_PADDING + if (values.size > 1) (size.width - (H_PADDING * 2)) / (values.size - 1) * index else size.width / 2
+                drawContext.canvas.nativeCanvas.drawText(
+                    dayAbbreviation(dates.getOrNull(index)),
+                    x,
+                    size.height - (V_PADDING / 2),
+                    textPaint
+                )
+            }
+            return@Canvas
         }
 
-        path.moveTo(positions.first().x, positions.first().y)
-        positions.drop(1).forEach { point ->
-            path.lineTo(point.x, point.y)
+        val chartWidth = size.width - (H_PADDING * 2)
+        val chartHeightPx = size.height - (V_PADDING * 2)
+
+        val minValue = availableValues.minOrNull() ?: 0f
+        val maxValue = availableValues.maxOrNull() ?: 0f
+        val baseRange = (maxValue - minValue).takeIf { it > 0f } ?: maxValue.coerceAtLeast(1f) * 0.25f
+        val yMin = minValue - baseRange * 0.2f
+        val yMax = maxValue + baseRange * 0.2f
+        val range = (yMax - yMin).coerceAtLeast(0.1f)
+
+        val offsets = values.mapIndexed { index, value ->
+            val x = H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
+            value?.let {
+                val normalized = (it - yMin) / range
+                val y = size.height - V_PADDING - (normalized * chartHeightPx)
+                index to Offset(x, y)
+            }
         }
 
-        drawPath(
-            path = path,
-            color = primaryColor,
-            style = Stroke(width = 6f, cap = StrokeCap.Round)
-        )
+        val paths = mutableListOf<Path>()
+        var currentPath: Path? = null
+        offsets.forEach { pair ->
+            if (pair != null) {
+                val (_, point) = pair
+                if (currentPath == null) {
+                    currentPath = Path().apply { moveTo(point.x, point.y) }
+                } else {
+                    currentPath?.lineTo(point.x, point.y)
+                }
+            } else {
+                currentPath?.let { paths += it }
+                currentPath = null
+            }
+        }
+        currentPath?.let { paths += it }
 
-        positions.forEachIndexed { index, point ->
-            drawCircle(
-                color = secondaryColor,
-                radius = 10f,
-                center = point
+        paths.forEach { path ->
+            drawPath(
+                path = path,
+                color = primaryColor,
+                style = Stroke(width = 6f, cap = StrokeCap.Round)
             )
+        }
 
+        offsets.forEachIndexed { index, pair ->
+            val x = H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
             drawContext.canvas.nativeCanvas.drawText(
-                valueLabel(points[index]),
-                point.x,
-                point.y - 12f,
+                dayAbbreviation(dates.getOrNull(index)),
+                x,
+                size.height - (V_PADDING / 2),
                 textPaint
             )
 
-            val label = labels.getOrNull(index)
-            if (label != null) {
+            pair?.let { (_, point) ->
+                drawCircle(
+                    color = secondaryColor,
+                    radius = 9f,
+                    center = point
+                )
                 drawContext.canvas.nativeCanvas.drawText(
-                    label,
+                    valueFormatter(values[index] ?: 0f),
                     point.x,
-                    chartHeight,
+                    point.y - 14f,
                     textPaint
                 )
             }
@@ -196,6 +222,16 @@ private fun LineChart(
     }
 }
 
+private fun dayAbbreviation(date: LocalDate?): String = when (date?.dayOfWeek) {
+    DayOfWeek.MONDAY -> "L"
+    DayOfWeek.TUESDAY -> "M"
+    DayOfWeek.WEDNESDAY -> "Mi"
+    DayOfWeek.THURSDAY -> "J"
+    DayOfWeek.FRIDAY -> "V"
+    DayOfWeek.SATURDAY -> "S"
+    DayOfWeek.SUNDAY -> "D"
+    else -> ""
+}
 
 private fun Color.toArgb(): Int = android.graphics.Color.argb(
     (alpha * 255).toInt(),
