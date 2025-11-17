@@ -75,8 +75,12 @@ fun ProcardNavHost(
                 factory = DailyRegisterViewModel.provideFactory(context)
             )
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+            val weightPoints = viewModel.weightLast7Days.collectAsStateWithLifecycle()
+            val stepsPoints = viewModel.stepsLast7Days.collectAsStateWithLifecycle()
             GraficosScreen(
-                uiState = uiState.value,
+                weightPoints = weightPoints.value,
+                stepsPoints = stepsPoints.value,
+                weightEditor = uiState.value.weightEditor,
                 onWeightPointSelected = viewModel::onChartWeightSelected,
                 onDismissHistory = viewModel::onDismissHistory,
                 onPreviousHistory = viewModel::onHistoryPreviousDay,

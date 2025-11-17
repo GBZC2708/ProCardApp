@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -150,6 +151,22 @@ class DailyRegisterViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = WeeklyMetricsUiModel()
     )
+
+    val weightLast7Days: StateFlow<List<WeeklyWeightPoint>> = weeklyUiFlow
+        .map { it.weightPoints }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    val stepsLast7Days: StateFlow<List<WeeklyStepsPoint>> = weeklyUiFlow
+        .map { it.stepsPoints }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 
     val uiState: StateFlow<DailyRegisterUiState> =
         combine(
