@@ -3,6 +3,7 @@ package pe.com.zzynan.procardapp.ui.navigation
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,7 +40,13 @@ fun ProcardNavHost(
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
             RegistroScreen(
                 uiState = uiState.value,
-                onToggleStepCounter = viewModel::onToggleStepCounter
+                onToggleStepCounter = viewModel::onToggleStepCounter,
+                onWeightChange = viewModel::onWeightValueChanged,
+                onOpenHistory = viewModel::onOpenHistory,
+                onDismissHistory = viewModel::onDismissHistory,
+                onPreviousHistory = viewModel::onHistoryPreviousDay,
+                onNextHistory = viewModel::onHistoryNextDay,
+                onHistoryWeightChange = viewModel::onHistoryWeightChanged
             )
         }
         composable(ProcardScreen.Alimentacion.route) {
@@ -58,9 +65,24 @@ fun ProcardNavHost(
             // Contenido placeholder para la pantalla de calculadora.
             CalculadoraScreen()
         }
-        composable(ProcardScreen.Graficos.route) {
-            // Contenido placeholder para la pantalla de gráficos.
-            GraficosScreen()
+        composable(ProcardScreen.Graficos.route) { backStackEntry ->
+            val context = LocalContext.current
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(ProcardScreen.Registro.route)
+            }
+            val viewModel: DailyRegisterViewModel = viewModel(
+                parentEntry,
+                factory = DailyRegisterViewModel.provideFactory(context)
+            )
+            val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+            GraficosScreen(
+                uiState = uiState.value,
+                onWeightPointSelected = viewModel::onChartWeightSelected,
+                onDismissHistory = viewModel::onDismissHistory,
+                onPreviousHistory = viewModel::onHistoryPreviousDay,
+                onNextHistory = viewModel::onHistoryNextDay,
+                onHistoryWeightChange = viewModel::onHistoryWeightChanged
+            )
         }
     }
 }

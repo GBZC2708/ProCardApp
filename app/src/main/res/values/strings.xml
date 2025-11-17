@@ -18,4 +18,11 @@
     <string name="notification_steps_content">Pasos de hoy: %1$d</string>
     <string name="daily_steps_saved">Último registro guardado: %1$d pasos</string>
     <string name="daily_last_update_user">Actualizado para %1$s</string>
+    <string name="weight_title">Peso en ayunas</string>
+    <string name="weight_status_label">Estado: %1$s</string>
+    <string name="weight_supporting_text">Ingresa tu peso con 2 decimales</string>
+    <string name="weight_history_button">Historial</string>
+    <string name="weight_icon_cd">Ícono de peso en ayunas</string>
+    <string name="weight_chart_title">Peso últimos 7 días</string>
+    <string name="steps_chart_title">Pasos últimos 7 días</string>
 </resources>
