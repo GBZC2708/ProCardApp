@@ -1,27 +1,36 @@
 package pe.com.zzynan.procardapp.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import pe.com.zzynan.procardapp.core.di.ServiceLocator
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
 import pe.com.zzynan.procardapp.data.local.entity.toDatabaseValue
 import pe.com.zzynan.procardapp.data.repository.DailyMetricsRepository
 import pe.com.zzynan.procardapp.domain.model.TrainingStage
+import pe.com.zzynan.procardapp.domain.usecase.ObserveWeeklyMetricsUseCase
+import pe.com.zzynan.procardapp.ui.mappers.toWeeklyMetricsUiModel
+import pe.com.zzynan.procardapp.ui.model.WeeklyMetricsUiModel
 
 /**
  * ViewModel de ejemplo que demuestra cómo consumir el repositorio en una capa de presentación.
  * Se usa MutableStateFlow para mantener el usuario y la fecha actuales, permitiendo observabilidad reactiva.
  */
 class DailyMetricsViewModel(
-    private val dailyMetricsRepository: DailyMetricsRepository
+    private val dailyMetricsRepository: DailyMetricsRepository,
+    private val observeWeeklyMetricsUseCase: ObserveWeeklyMetricsUseCase
 ) : ViewModel() {
 
     /**
@@ -62,6 +71,26 @@ class DailyMetricsViewModel(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = emptyList()
+            )
+
+    val weeklyMetricsUiState: StateFlow<WeeklyMetricsUiModel> =
+        combine(activeUsername, activeDateEpoch) { username, dateEpoch ->
+            username to dateEpoch
+        }
+            .flatMapLatest { (username, dateEpoch) ->
+                observeWeeklyMetricsUseCase(
+                    username = username,
+                    endDateEpoch = dateEpoch,
+                    days = 7
+                ).map { metrics ->
+                    metrics.toWeeklyMetricsUiModel(endDate = dateEpoch)
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList<pe.com.zzynan.procardapp.domain.model.DailyMetrics>()
+                    .toWeeklyMetricsUiModel(endDate = activeDateEpoch.value)
             )
 
     init {
@@ -137,6 +166,22 @@ class DailyMetricsViewModel(
     fun clearActiveUserHistory() {
         viewModelScope.launch {
             dailyMetricsRepository.clearUserHistory(activeUsername.value)
+        }
+    }
+
+    companion object {
+        fun provideFactory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val appContext = context.applicationContext
+                val repository = ServiceLocator.provideDailyMetricsRepository(appContext)
+                val weeklyMetricsUseCase = ObserveWeeklyMetricsUseCase(repository)
+
+                @Suppress("UNCHECKED_CAST")
+                return DailyMetricsViewModel(
+                    repository,
+                    weeklyMetricsUseCase
+                ) as T
+            }
         }
     }
 }

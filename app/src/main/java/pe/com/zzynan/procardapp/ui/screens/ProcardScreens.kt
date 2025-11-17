@@ -3,20 +3,16 @@ package pe.com.zzynan.procardapp.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -106,34 +102,24 @@ fun GraficosScreen(
     onConfirmHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val horizontalScrollState = rememberScrollState()
-    LaunchedEffect(weightPoints, stepsPoints, horizontalScrollState.maxValue) {
-        horizontalScrollState.scrollTo(horizontalScrollState.maxValue)
-    }
+    val verticalScrollState = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = 16.dp)
+            .verticalScroll(verticalScrollState)
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(horizontalScrollState)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .widthIn(min = 640.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                WeightLineChart(
-                    points = weightPoints,
-                    onPointSelected = onWeightPointSelected
-                )
-                StepsLineChart(points = stepsPoints)
-            }
-        }
+        WeightLineChart(
+            points = weightPoints,
+            onPointSelected = onWeightPointSelected,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        StepsLineChart(
+            points = stepsPoints,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 
     WeightHistoryDialog(

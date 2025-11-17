@@ -17,6 +17,7 @@ import pe.com.zzynan.procardapp.ui.screens.EntrenamientoScreen
 import pe.com.zzynan.procardapp.ui.screens.GraficosScreen
 import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
 import pe.com.zzynan.procardapp.ui.screens.SuplementacionScreen
+import pe.com.zzynan.procardapp.ui.viewmodel.DailyMetricsViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
 
 // File: app/src/main/java/pe/com/zzynan/procardapp/ui/navigation/ProcardNavHost.kt
@@ -74,12 +75,15 @@ fun ProcardNavHost(
                 parentEntry,
                 factory = DailyRegisterViewModel.provideFactory(context)
             )
+            val metricsViewModel: DailyMetricsViewModel = viewModel(
+                parentEntry,
+                factory = DailyMetricsViewModel.provideFactory(context)
+            )
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
-            val weightPoints = viewModel.weightLast7Days.collectAsStateWithLifecycle()
-            val stepsPoints = viewModel.stepsLast7Days.collectAsStateWithLifecycle()
+            val weeklyMetricsUiState = metricsViewModel.weeklyMetricsUiState.collectAsStateWithLifecycle()
             GraficosScreen(
-                weightPoints = weightPoints.value,
-                stepsPoints = stepsPoints.value,
+                weightPoints = weeklyMetricsUiState.value.weightPoints,
+                stepsPoints = weeklyMetricsUiState.value.stepsPoints,
                 weightEditor = uiState.value.weightEditor,
                 onWeightPointSelected = viewModel::onChartWeightSelected,
                 onDismissHistory = viewModel::onDismissHistory,
