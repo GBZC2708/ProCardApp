@@ -2,8 +2,6 @@ package pe.com.zzynan.procardapp.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,7 +33,6 @@ fun ProcardApp() {
     val currentScreen = screens.firstOrNull { screen ->
         screen.route == backStackEntry?.destination?.route
     } ?: ProcardScreen.Registro
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val context = LocalContext.current
     val topBarViewModel: TopBarViewModel = viewModel(
@@ -73,13 +70,11 @@ fun ProcardApp() {
                     }
                 )
             },
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding ->
             // Contenedor de navegación principal respetando el padding del Scaffold.
             ProcardNavHost(
                 navController = navController,
-                padding = innerPadding,
-                snackbarHostState = snackbarHostState
+                padding = innerPadding
             )
         }
     }

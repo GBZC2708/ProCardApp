@@ -10,17 +10,14 @@ import java.time.LocalDate
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.core.di.ServiceLocator
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.core.steps.StepCounterManager
@@ -60,7 +57,6 @@ class DailyRegisterViewModel(
     private val isHistoryVisibleFlow = MutableStateFlow(false)
     private val historyWeightTextFlow = MutableStateFlow("")
     private val historyPlaceholderFlow = MutableStateFlow<String?>(null)
-    private val eventsFlow = MutableSharedFlow<UiEvent>()
 
     private val profileFlow = observeUserProfileUseCase()
         .stateIn(
@@ -190,10 +186,6 @@ class DailyRegisterViewModel(
             initialValue = DailyRegisterUiState()
         )
 
-    val events = eventsFlow.asSharedFlow()
-
-
-
     init {
         stepCounterManager.ensureServiceRunning()
         viewModelScope.launch {
@@ -289,7 +281,6 @@ class DailyRegisterViewModel(
 
     private suspend fun persistWeightForDate(weight: Float, date: LocalDate) {
         saveDailyWeightUseCase(profileFlow.value.displayName, date.toEpochDayLong(), weight)
-        eventsFlow.emit(UiEvent.ShowMessage(R.string.weight_saved_message))
     }
 
     private suspend fun weightForDate(date: LocalDate): Float? {
@@ -330,10 +321,6 @@ class DailyRegisterViewModel(
     }
 
     private val weightInputRegex = Regex("^\\d*(?:\\.\\d{0,2})?$")
-
-    sealed class UiEvent {
-        data class ShowMessage(val messageRes: Int) : UiEvent()
-    }
 
     companion object {
         fun provideFactory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
