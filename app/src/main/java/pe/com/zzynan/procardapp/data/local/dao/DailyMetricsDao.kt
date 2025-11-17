@@ -44,6 +44,26 @@ interface DailyMetricsDao {
     fun observeUserHistory(username: String): Flow<List<DailyMetricsEntity>>
 
     /**
+     * Observa un rango de fechas para alimentar gráficos de evolución de peso y pasos.
+     */
+    @Query(
+        "SELECT * FROM daily_metrics WHERE username = :username AND dateEpoch BETWEEN :startEpoch AND :endEpoch ORDER BY dateEpoch ASC"
+    )
+    fun observeMetricsBetween(
+        username: String,
+        startEpoch: Long,
+        endEpoch: Long
+    ): Flow<List<DailyMetricsEntity>>
+
+    /**
+     * Recupera el último peso registrado antes o en la fecha solicitada.
+     */
+    @Query(
+        "SELECT * FROM daily_metrics WHERE username = :username AND dateEpoch <= :dateEpoch AND weightFasted > 0 ORDER BY dateEpoch DESC LIMIT 1"
+    )
+    suspend fun getLastWeightOnOrBefore(username: String, dateEpoch: Long): DailyMetricsEntity?
+
+    /**
      * Elimina todos los registros de un usuario específico para liberar memoria local rápidamente.
      */
     @Query("DELETE FROM daily_metrics WHERE username = :username")

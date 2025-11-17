@@ -41,6 +41,24 @@ class DailyMetricsRepository(
     }
 
     /**
+     * Observa un rango acotado de fechas para alimentar gráficos semanales.
+     */
+    fun observeMetricsBetween(
+        username: String,
+        startEpoch: Long,
+        endEpoch: Long
+    ): Flow<List<DailyMetricsEntity>> {
+        return dailyMetricsDao.observeMetricsBetween(username, startEpoch, endEpoch)
+    }
+
+    /**
+     * Obtiene el último peso registrado hasta la fecha indicada, útil para placeholders.
+     */
+    suspend fun getLastWeightOnOrBefore(username: String, dateEpoch: Long): DailyMetricsEntity? {
+        return dailyMetricsDao.getLastWeightOnOrBefore(username, dateEpoch)
+    }
+
+    /**
      * Permite limpiar todos los registros de un usuario cuando ya no se necesitan localmente.
      */
     suspend fun clearUserHistory(username: String) {

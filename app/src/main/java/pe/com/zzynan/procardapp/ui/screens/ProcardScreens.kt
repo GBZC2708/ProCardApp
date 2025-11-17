@@ -16,15 +16,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.time.LocalDate
 import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.ui.components.StepCounterCard
+import pe.com.zzynan.procardapp.ui.components.WeightCard
+import pe.com.zzynan.procardapp.ui.components.WeightHistoryDialog
+import pe.com.zzynan.procardapp.ui.components.StepsLineChart
+import pe.com.zzynan.procardapp.ui.components.WeightLineChart
 import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
 
-// File: app/src/main/java/pe/com/zzynan/procardapp/ui/screens/ProcardScreens.kt
 @Composable
 fun RegistroScreen(
     uiState: DailyRegisterUiState,
     onToggleStepCounter: () -> Unit,
+    onWeightChange: (String) -> Unit,
+    onOpenHistory: (LocalDate) -> Unit,
+    onDismissHistory: () -> Unit,
+    onPreviousHistory: () -> Unit,
+    onNextHistory: () -> Unit,
+    onHistoryWeightChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -37,6 +47,12 @@ fun RegistroScreen(
         StepCounterCard(
             uiModel = uiState.stepCounter,
             onPlayPauseClick = onToggleStepCounter,
+            modifier = Modifier.fillMaxWidth()
+        )
+        WeightCard(
+            uiModel = uiState.weightCard,
+            onWeightChange = onWeightChange,
+            onOpenHistory = { onOpenHistory(LocalDate.now()) },
             modifier = Modifier.fillMaxWidth()
         )
         uiState.metrics?.let { metrics ->
@@ -58,13 +74,53 @@ fun RegistroScreen(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(200.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
+
+    WeightHistoryDialog(
+        uiModel = uiState.weightEditor,
+        onDismiss = onDismissHistory,
+        onPrevious = onPreviousHistory,
+        onNext = onNextHistory,
+        onWeightChange = onHistoryWeightChange
+    )
+}
+
+@Composable
+fun GraficosScreen(
+    uiState: DailyRegisterUiState,
+    onWeightPointSelected: (LocalDate) -> Unit,
+    onDismissHistory: () -> Unit,
+    onPreviousHistory: () -> Unit,
+    onNextHistory: () -> Unit,
+    onHistoryWeightChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        WeightLineChart(
+            points = uiState.weeklyMetrics.weightPoints,
+            onPointSelected = onWeightPointSelected
+        )
+        StepsLineChart(points = uiState.weeklyMetrics.stepsPoints)
+    }
+
+    WeightHistoryDialog(
+        uiModel = uiState.weightEditor,
+        onDismiss = onDismissHistory,
+        onPrevious = onPreviousHistory,
+        onNext = onNextHistory,
+        onWeightChange = onHistoryWeightChange
+    )
 }
 
 @Composable
 fun AlimentacionScreen(modifier: Modifier = Modifier) {
-    // Pantalla de Alimentación para controlar comidas, macros y calorías.
     Box(modifier = modifier.fillMaxSize()) {
         // TODO: agregar contenido de esta pantalla.
     }
@@ -72,7 +128,6 @@ fun AlimentacionScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun EntrenamientoScreen(modifier: Modifier = Modifier) {
-    // Pantalla de Entrenamiento destinada a registrar rutinas y cargas.
     Box(modifier = modifier.fillMaxSize()) {
         // TODO: agregar contenido de esta pantalla.
     }
@@ -80,7 +135,6 @@ fun EntrenamientoScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun SuplementacionScreen(modifier: Modifier = Modifier) {
-    // Pantalla de Suplementación para llevar el control de suplementos diarios.
     Box(modifier = modifier.fillMaxSize()) {
         // TODO: agregar contenido de esta pantalla.
     }
@@ -88,15 +142,6 @@ fun SuplementacionScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun CalculadoraScreen(modifier: Modifier = Modifier) {
-    // Pantalla de Calculadora que permitirá realizar cálculos de objetivos y macros.
-    Box(modifier = modifier.fillMaxSize()) {
-        // TODO: agregar contenido de esta pantalla.
-    }
-}
-
-@Composable
-fun GraficosScreen(modifier: Modifier = Modifier) {
-    // Pantalla de Gráficos para visualizar evolución de peso, calorías y rendimiento.
     Box(modifier = modifier.fillMaxSize()) {
         // TODO: agregar contenido de esta pantalla.
     }
