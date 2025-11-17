@@ -27,7 +27,10 @@ import pe.com.zzynan.procardapp.ui.components.WeightCard
 import pe.com.zzynan.procardapp.ui.components.WeightHistoryDialog
 import pe.com.zzynan.procardapp.ui.components.StepsLineChart
 import pe.com.zzynan.procardapp.ui.components.WeightLineChart
+import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
+import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
 import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
+import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
 
 @Composable
 fun RegistroScreen(
@@ -92,7 +95,9 @@ fun RegistroScreen(
 
 @Composable
 fun GraficosScreen(
-    uiState: DailyRegisterUiState,
+    weightPoints: List<WeeklyWeightPoint>,
+    stepsPoints: List<WeeklyStepsPoint>,
+    weightEditor: WeightEditorUiModel,
     onWeightPointSelected: (LocalDate) -> Unit,
     onDismissHistory: () -> Unit,
     onPreviousHistory: () -> Unit,
@@ -102,7 +107,7 @@ fun GraficosScreen(
     modifier: Modifier = Modifier
 ) {
     val horizontalScrollState = rememberScrollState()
-    LaunchedEffect(uiState.weeklyMetrics) {
+    LaunchedEffect(weightPoints, stepsPoints, horizontalScrollState.maxValue) {
         horizontalScrollState.scrollTo(horizontalScrollState.maxValue)
     }
     Column(
@@ -123,16 +128,16 @@ fun GraficosScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 WeightLineChart(
-                    points = uiState.weeklyMetrics.weightPoints,
+                    points = weightPoints,
                     onPointSelected = onWeightPointSelected
                 )
-                StepsLineChart(points = uiState.weeklyMetrics.stepsPoints)
+                StepsLineChart(points = stepsPoints)
             }
         }
     }
 
     WeightHistoryDialog(
-        uiModel = uiState.weightEditor,
+        uiModel = weightEditor,
         onDismiss = onDismissHistory,
         onPrevious = onPreviousHistory,
         onNext = onNextHistory,

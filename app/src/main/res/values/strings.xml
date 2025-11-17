@@ -25,4 +25,5 @@
     <string name="weight_status_pending">Hoy pendiente</string>
     <string name="weight_chart_title">Peso últimos 7 días</string>
     <string name="steps_chart_title">Pasos últimos 7 días</string>
+    <string name="chart_empty_state">Sin datos</string>
 </resources>

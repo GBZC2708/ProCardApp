@@ -41,6 +41,15 @@ fun WeightLineChart(
     onPointSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val displayPoints = if (points.isNotEmpty()) {
+        points
+    } else {
+        val startDate = LocalDate.now().minusDays(6)
+        (0 until 7).map { offset ->
+            WeeklyWeightPoint(date = startDate.plusDays(offset.toLong()), weight = null)
+        }
+    }
+    val emptyText = stringResource(id = R.string.chart_empty_state)
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -60,10 +69,11 @@ fun WeightLineChart(
                 fontWeight = FontWeight.Bold
             )
             CompactLineChart(
-                values = points.map { it.weight },
-                dates = points.map { it.date },
-                onPointSelected = { index -> points.getOrNull(index)?.date?.let(onPointSelected) },
-                valueFormatter = { value -> String.format("%.2f", value) }
+                values = displayPoints.map { it.weight },
+                dates = displayPoints.map { it.date },
+                onPointSelected = { index -> displayPoints.getOrNull(index)?.date?.let(onPointSelected) },
+                valueFormatter = { value -> String.format("%.2f", value) },
+                emptyText = emptyText
             )
         }
     }
@@ -74,6 +84,15 @@ fun StepsLineChart(
     points: List<WeeklyStepsPoint>,
     modifier: Modifier = Modifier
 ) {
+    val displayPoints = if (points.isNotEmpty()) {
+        points
+    } else {
+        val startDate = LocalDate.now().minusDays(6)
+        (0 until 7).map { offset ->
+            WeeklyStepsPoint(date = startDate.plusDays(offset.toLong()), steps = 0)
+        }
+    }
+    val emptyText = stringResource(id = R.string.chart_empty_state)
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -93,10 +112,11 @@ fun StepsLineChart(
                 fontWeight = FontWeight.Bold
             )
             CompactLineChart(
-                values = points.map { it.steps.toFloat() },
-                dates = points.map { it.date },
+                values = displayPoints.map { it.steps.toFloat() },
+                dates = displayPoints.map { it.date },
                 onPointSelected = null,
-                valueFormatter = { value -> value.toInt().toString() }
+                valueFormatter = { value -> value.toInt().toString() },
+                emptyText = emptyText
             )
         }
     }
@@ -108,6 +128,7 @@ private fun CompactLineChart(
     dates: List<LocalDate>,
     onPointSelected: ((Int) -> Unit)?,
     valueFormatter: (Float) -> String,
+    emptyText: String,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -119,6 +140,14 @@ private fun CompactLineChart(
         color = onSurfaceColor.toArgb()
         textSize = 26f
         isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+    }
+
+    val safeDates = dates.ifEmpty {
+        val today = LocalDate.now()
+        (0 until values.size.coerceAtLeast(7)).map { offset ->
+            today.minusDays((values.size.coerceAtLeast(7) - 1 - offset).toLong())
+        }
     }
 
     Canvas(
@@ -136,19 +165,16 @@ private fun CompactLineChart(
                 }
             }
     ) {
-        if (values.isEmpty()) return@Canvas
+        if (values.isEmpty()) {
+            drawXAxisLabels(textPaint, safeDates, values.size)
+            drawEmptyMessage(textPaint, emptyText)
+            return@Canvas
+        }
 
         val availableValues = values.filterNotNull()
         if (availableValues.isEmpty()) {
-            dates.forEachIndexed { index, _ ->
-                val x = H_PADDING + if (values.size > 1) (size.width - (H_PADDING * 2)) / (values.size - 1) * index else size.width / 2
-                drawContext.canvas.nativeCanvas.drawText(
-                    dayAbbreviation(dates.getOrNull(index)),
-                    x,
-                    size.height - (V_PADDING / 2),
-                    textPaint
-                )
-            }
+            drawXAxisLabels(textPaint, safeDates, values.size)
+            drawEmptyMessage(textPaint, emptyText)
             return@Canvas
         }
 
@@ -199,7 +225,7 @@ private fun CompactLineChart(
         offsets.forEachIndexed { index, pair ->
             val x = H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
             drawContext.canvas.nativeCanvas.drawText(
-                dayAbbreviation(dates.getOrNull(index)),
+                dayAbbreviation(safeDates.getOrNull(index)),
                 x,
                 size.height - (V_PADDING / 2),
                 textPaint
@@ -223,14 +249,44 @@ private fun CompactLineChart(
 }
 
 private fun dayAbbreviation(date: LocalDate?): String = when (date?.dayOfWeek) {
-    DayOfWeek.MONDAY -> "L"
-    DayOfWeek.TUESDAY -> "M"
-    DayOfWeek.WEDNESDAY -> "Mi"
-    DayOfWeek.THURSDAY -> "J"
-    DayOfWeek.FRIDAY -> "V"
-    DayOfWeek.SATURDAY -> "S"
-    DayOfWeek.SUNDAY -> "D"
+    DayOfWeek.MONDAY -> "Lun"
+    DayOfWeek.TUESDAY -> "Mar"
+    DayOfWeek.WEDNESDAY -> "Mie"
+    DayOfWeek.THURSDAY -> "Jue"
+    DayOfWeek.FRIDAY -> "Vie"
+    DayOfWeek.SATURDAY -> "Sab"
+    DayOfWeek.SUNDAY -> "Dom"
     else -> ""
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawXAxisLabels(
+    textPaint: Paint,
+    dates: List<LocalDate>,
+    valueCount: Int
+) {
+    val count = valueCount.coerceAtLeast(dates.size).coerceAtLeast(1)
+    val chartWidth = size.width - (H_PADDING * 2)
+    repeat(count) { index ->
+        val x = H_PADDING + if (count > 1) chartWidth / (count - 1) * index else chartWidth / 2
+        drawContext.canvas.nativeCanvas.drawText(
+            dayAbbreviation(dates.getOrNull(index)),
+            x,
+            size.height - (V_PADDING / 2),
+            textPaint
+        )
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEmptyMessage(
+    textPaint: Paint,
+    emptyText: String
+) {
+    drawContext.canvas.nativeCanvas.drawText(
+        emptyText,
+        size.width / 2,
+        size.height / 2,
+        textPaint
+    )
 }
 
 private fun Color.toArgb(): Int = android.graphics.Color.argb(
