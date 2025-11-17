@@ -19,6 +19,9 @@ import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
 import pe.com.zzynan.procardapp.ui.screens.SuplementacionScreen
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyMetricsViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
+import androidx.compose.runtime.LaunchedEffect
+import java.time.LocalDate
+
 
 // File: app/src/main/java/pe/com/zzynan/procardapp/ui/navigation/ProcardNavHost.kt
 @Composable
@@ -81,6 +84,14 @@ fun ProcardNavHost(
             )
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
             val weeklyMetricsUiState = metricsViewModel.weeklyMetricsUiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(uiState.value.userName) {
+                // sincroniza el usuario para que los gráficos lean los mismos datos que Registro
+                metricsViewModel.setActiveUsername(uiState.value.userName)
+                // opcional, pero recomendable: asegurar que el rango termine en hoy
+                metricsViewModel.setActiveDate(LocalDate.now())
+            }
+
             GraficosScreen(
                 weightPoints = weeklyMetricsUiState.value.weightPoints,
                 stepsPoints = weeklyMetricsUiState.value.stepsPoints,

@@ -36,8 +36,7 @@ class DailyMetricsViewModel(
     /**
      * Usuario activo cuyas métricas se desean observar o actualizar.
      */
-    private val activeUsername: MutableStateFlow<String> = MutableStateFlow("usuario_demo")
-
+    private val activeUsername: MutableStateFlow<String> = MutableStateFlow("")
     /**
      * Fecha seleccionada en formato epochDay para alinear con la entidad de la base de datos.
      */
@@ -93,27 +92,6 @@ class DailyMetricsViewModel(
                     .toWeeklyMetricsUiModel(endDate = activeDateEpoch.value)
             )
 
-    init {
-        /**
-         * Ejemplo de inserción inicial usando datos simulados para el usuario por defecto.
-         * En una app real, este bloque podría dispararse desde la UI al capturar los datos del día.
-         */
-        viewModelScope.launch {
-            val metricsExample = DailyMetricsEntity(
-                username = activeUsername.value,
-                dateEpoch = activeDateEpoch.value,
-                weightFasted = 86.22f,
-                dailySteps = 10_000,
-                cardioMinutes = 35,
-                trainingDone = true,
-                waterMl = 4_000,
-                saltGramsX10 = 35,
-                sleepMinutes = 420,
-                stage = TrainingStage.DEFINICION.toDatabaseValue()
-            )
-            dailyMetricsRepository.upsertDailyMetrics(metricsExample)
-        }
-    }
 
     /**
      * Permite a la UI cambiar el usuario activo; los flujos se actualizan automáticamente.

@@ -31,7 +31,7 @@ import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
 
-private val chartHeight = 160.dp
+private val chartHeight = 110.dp
 private const val H_PADDING = 28f
 private const val V_PADDING = 24f
 
