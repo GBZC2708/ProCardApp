@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
 import java.time.LocalDate
 import pe.com.zzynan.procardapp.R
+import pe.com.zzynan.procardapp.ui.model.WeeklyCaloriesPointUiModel
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
 
@@ -113,6 +114,53 @@ fun StepsLineChart(
             )
             CompactLineChart(
                 values = displayPoints.map { it.steps.toFloat() },
+                dates = displayPoints.map { it.date },
+                onPointSelected = null,
+                valueFormatter = { value -> value.toInt().toString() },
+                emptyText = emptyText
+            )
+        }
+    }
+}
+
+@Composable
+fun WeeklyCaloriesChart(
+    points: List<WeeklyCaloriesPointUiModel>,
+    modifier: Modifier = Modifier
+) {
+    val displayPoints = if (points.isNotEmpty()) {
+        points
+    } else {
+        val startDate = LocalDate.now().minusDays(6)
+        (0 until 7).map { offset ->
+            WeeklyCaloriesPointUiModel(
+                dayLabel = dayAbbreviation(startDate.plusDays(offset.toLong())),
+                date = startDate.plusDays(offset.toLong()),
+                calories = 0f
+            )
+        }
+    }
+    val emptyText = stringResource(id = R.string.chart_empty_state)
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.weekly_calories_chart_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            CompactLineChart(
+                values = displayPoints.map { it.calories },
                 dates = displayPoints.map { it.date },
                 onPointSelected = null,
                 valueFormatter = { value -> value.toInt().toString() },

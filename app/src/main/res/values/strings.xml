@@ -26,4 +26,19 @@
     <string name="weight_chart_title">Peso últimos 7 días</string>
     <string name="steps_chart_title">Pasos últimos 7 días</string>
     <string name="chart_empty_state">Sin datos</string>
+    <string name="food_screen_title">Comida</string>
+    <string name="food_catalog_tab_cd">Abrir catálogo de alimentos</string>
+    <string name="food_plan_tab_cd">Abrir plan de hoy</string>
+    <string name="food_add_item_cd">Agregar alimento</string>
+    <string name="food_add_entry_cd">Agregar entrada de comida</string>
+    <string name="food_copy_cd">Copiar desde ayer</string>
+    <string name="food_edit_name">Nombre</string>
+    <string name="food_edit_base_amount">Cantidad base</string>
+    <string name="food_edit_base_unit">Unidad base</string>
+    <string name="food_edit_protein">Proteína (g)</string>
+    <string name="food_edit_fat">Grasas (g)</string>
+    <string name="food_edit_carb">Carbohidratos (g)</string>
+    <string name="food_edit_consumed_amount">Cantidad consumida</string>
+    <string name="food_dialog_confirm">Aceptar</string>
+    <string name="weekly_calories_chart_title">Calorías últimos 7 días</string>
 </resources>
