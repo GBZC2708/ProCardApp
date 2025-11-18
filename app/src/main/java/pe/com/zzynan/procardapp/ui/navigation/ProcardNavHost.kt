@@ -11,7 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import pe.com.zzynan.procardapp.ui.screens.AlimentacionScreen
+import pe.com.zzynan.procardapp.ui.screens.FoodScreen
 import pe.com.zzynan.procardapp.ui.screens.CalculadoraScreen
 import pe.com.zzynan.procardapp.ui.screens.EntrenamientoScreen
 import pe.com.zzynan.procardapp.ui.screens.GraficosScreen
@@ -19,6 +19,7 @@ import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
 import pe.com.zzynan.procardapp.ui.screens.SuplementacionScreen
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyMetricsViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
+import pe.com.zzynan.procardapp.ui.viewmodel.FoodViewModel
 import androidx.compose.runtime.LaunchedEffect
 import java.time.LocalDate
 
@@ -54,8 +55,30 @@ fun ProcardNavHost(
             )
         }
         composable(ProcardScreen.Alimentacion.route) {
-            // Contenido placeholder para la pantalla de alimentación.
-            AlimentacionScreen()
+            val context = LocalContext.current
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(ProcardScreen.Registro.route)
+            }
+            val registerViewModel: DailyRegisterViewModel = viewModel(
+                parentEntry,
+                factory = DailyRegisterViewModel.provideFactory(context)
+            )
+            val foodViewModel: FoodViewModel = viewModel(
+                parentEntry,
+                factory = FoodViewModel.provideFactory(context)
+            )
+            val uiState = registerViewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(uiState.value.userName, uiState.value.dateEpoch) {
+                foodViewModel.setActiveUser(uiState.value.userName)
+                foodViewModel.setActiveDate(LocalDate.ofEpochDay(uiState.value.dateEpoch))
+            }
+
+            FoodScreen(
+                userName = uiState.value.userName,
+                viewModel = foodViewModel,
+                onBackClick = { navController.navigateUp() }
+            )
         }
         composable(ProcardScreen.Entrenamiento.route) {
             // Contenido placeholder para la pantalla de entrenamiento.
@@ -82,19 +105,27 @@ fun ProcardNavHost(
                 parentEntry,
                 factory = DailyMetricsViewModel.provideFactory(context)
             )
+            val foodViewModel: FoodViewModel = viewModel(
+                parentEntry,
+                factory = FoodViewModel.provideFactory(context)
+            )
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
             val weeklyMetricsUiState = metricsViewModel.weeklyMetricsUiState.collectAsStateWithLifecycle()
+            val foodUiState = foodViewModel.uiState.collectAsStateWithLifecycle()
 
             LaunchedEffect(uiState.value.userName) {
                 // sincroniza el usuario para que los gráficos lean los mismos datos que Registro
                 metricsViewModel.setActiveUsername(uiState.value.userName)
                 // opcional, pero recomendable: asegurar que el rango termine en hoy
                 metricsViewModel.setActiveDate(LocalDate.now())
+                foodViewModel.setActiveUser(uiState.value.userName)
+                foodViewModel.setActiveDate(LocalDate.now())
             }
 
             GraficosScreen(
                 weightPoints = weeklyMetricsUiState.value.weightPoints,
                 stepsPoints = weeklyMetricsUiState.value.stepsPoints,
+                caloriesPoints = foodUiState.value.weeklyCalories,
                 weightEditor = uiState.value.weightEditor,
                 onWeightPointSelected = viewModel::onChartWeightSelected,
                 onDismissHistory = viewModel::onDismissHistory,

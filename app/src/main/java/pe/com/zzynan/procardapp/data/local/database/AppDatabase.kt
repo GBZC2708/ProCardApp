@@ -4,9 +4,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import pe.com.zzynan.procardapp.data.local.dao.DailyMetricsDao
+import pe.com.zzynan.procardapp.data.local.dao.FoodDao
 import pe.com.zzynan.procardapp.data.local.dao.UserProfileDao
 import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
+import pe.com.zzynan.procardapp.data.local.entity.DailyFoodEntryEntity
+import pe.com.zzynan.procardapp.data.local.entity.FoodItemEntity
 import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
 
 /**
@@ -14,10 +18,16 @@ import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
  * Se habilita WAL y se mantienen solo las entidades necesarias para reducir IO innecesario.
  */
 @Database(
-    entities = [DailyMetricsEntity::class, UserProfileEntity::class],
-    version = 2,
+    entities = [
+        DailyMetricsEntity::class,
+        UserProfileEntity::class,
+        FoodItemEntity::class,
+        DailyFoodEntryEntity::class
+    ],
+    version = 3,
     exportSchema = false
 )
+@TypeConverters(LocalDateConverters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     /**
@@ -29,6 +39,11 @@ abstract class AppDatabase : RoomDatabase() {
      * Expone el DAO del perfil de usuario minimizando accesos redundantes.
      */
     abstract fun userProfileDao(): UserProfileDao
+
+    /**
+     * Expone el DAO de alimentos y planificación diaria.
+     */
+    abstract fun foodDao(): FoodDao
 
     companion object {
         @Volatile

@@ -23,8 +23,10 @@ import pe.com.zzynan.procardapp.ui.components.WeightCard
 import pe.com.zzynan.procardapp.ui.components.WeightHistoryDialog
 import pe.com.zzynan.procardapp.ui.components.StepsLineChart
 import pe.com.zzynan.procardapp.ui.components.WeightLineChart
+import pe.com.zzynan.procardapp.ui.components.WeeklyCaloriesChart
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
+import pe.com.zzynan.procardapp.ui.model.WeeklyCaloriesPointUiModel
 import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
 
@@ -93,6 +95,7 @@ fun RegistroScreen(
 fun GraficosScreen(
     weightPoints: List<WeeklyWeightPoint>,
     stepsPoints: List<WeeklyStepsPoint>,
+    caloriesPoints: List<WeeklyCaloriesPointUiModel>,
     weightEditor: WeightEditorUiModel,
     onWeightPointSelected: (LocalDate) -> Unit,
     onDismissHistory: () -> Unit,
@@ -118,6 +121,11 @@ fun GraficosScreen(
 
         StepsLineChart(
             points = stepsPoints,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        WeeklyCaloriesChart(
+            points = caloriesPoints,
             modifier = Modifier.fillMaxWidth()
         )
     }
