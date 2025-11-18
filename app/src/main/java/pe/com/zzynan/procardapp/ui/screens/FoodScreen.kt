@@ -32,7 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -48,7 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,7 +61,9 @@ import pe.com.zzynan.procardapp.ui.model.DailyNutritionSummaryUiModel
 import pe.com.zzynan.procardapp.ui.model.FoodItemUiModel
 import pe.com.zzynan.procardapp.ui.model.FoodTab
 import pe.com.zzynan.procardapp.ui.viewmodel.FoodViewModel
+import androidx.compose.material3.ExperimentalMaterial3Api
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoodScreen(
     userName: String,
@@ -72,6 +74,16 @@ fun FoodScreen(
     var inputDialogState by remember { mutableStateOf<InputDialogState?>(null) }
     var isAddEntryDialogVisible by remember { mutableStateOf(false) }
 
+    // Textos para diálogos (resueltos en contexto @Composable)
+    val editNameTitle = stringResource(id = R.string.food_edit_name)
+    val editBaseAmountTitle = stringResource(id = R.string.food_edit_base_amount)
+    val editBaseUnitTitle = stringResource(id = R.string.food_edit_base_unit)
+    val editProteinTitle = stringResource(id = R.string.food_edit_protein)
+    val editFatTitle = stringResource(id = R.string.food_edit_fat)
+    val editCarbTitle = stringResource(id = R.string.food_edit_carb)
+    val editConsumedAmountTitle = stringResource(id = R.string.food_edit_consumed_amount)
+
+
     LaunchedEffect(userName) {
         viewModel.setActiveUser(userName)
         viewModel.setActiveDate(LocalDate.now())
@@ -79,11 +91,14 @@ fun FoodScreen(
 
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = { Text(text = stringResource(id = R.string.food_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.Filled.Restaurant, contentDescription = stringResource(id = R.string.food_screen_title))
+                        Icon(
+                            imageVector = Icons.Filled.Restaurant,
+                            contentDescription = stringResource(id = R.string.food_screen_title)
+                        )
                     }
                 }
             )
@@ -111,46 +126,47 @@ fun FoodScreen(
                     onAddFoodClick = viewModel::onAddFoodClicked,
                     onEditNameClick = { item ->
                         inputDialogState = InputDialogState.Text(
-                            title = stringResource(id = R.string.food_edit_name),
+                            title = editNameTitle,
                             initialValue = item.name,
                             onConfirmText = { value -> viewModel.onEditName(item.id, value) }
                         )
                     },
                     onEditBaseAmountClick = { item ->
                         inputDialogState = InputDialogState.Number(
-                            title = stringResource(id = R.string.food_edit_base_amount),
+                            title = editBaseAmountTitle,
                             initialValue = item.baseAmount,
                             onConfirmValue = { value -> viewModel.onEditBaseAmount(item.id, value) }
                         )
                     },
                     onEditBaseUnitClick = { item ->
                         inputDialogState = InputDialogState.Text(
-                            title = stringResource(id = R.string.food_edit_base_unit),
+                            title = editBaseUnitTitle,
                             initialValue = item.baseUnit,
                             onConfirmText = { value -> viewModel.onEditBaseUnit(item.id, value) }
                         )
                     },
                     onEditProteinClick = { item ->
                         inputDialogState = InputDialogState.Number(
-                            title = stringResource(id = R.string.food_edit_protein),
+                            title = editProteinTitle,
                             initialValue = item.protein,
                             onConfirmValue = { value -> viewModel.onEditProtein(item.id, value) }
                         )
                     },
                     onEditFatClick = { item ->
                         inputDialogState = InputDialogState.Number(
-                            title = stringResource(id = R.string.food_edit_fat),
+                            title = editFatTitle,
                             initialValue = item.fat,
                             onConfirmValue = { value -> viewModel.onEditFat(item.id, value) }
                         )
                     },
                     onEditCarbClick = { item ->
                         inputDialogState = InputDialogState.Number(
-                            title = stringResource(id = R.string.food_edit_carb),
+                            title = editCarbTitle,
                             initialValue = item.carb,
                             onConfirmValue = { value -> viewModel.onEditCarb(item.id, value) }
                         )
                     }
+
                 )
                 FoodTab.TODAY_PLAN -> TodayFoodPlanSection(
                     entries = uiState.todayEntries,
@@ -159,11 +175,12 @@ fun FoodScreen(
                     onAddEntryClick = { isAddEntryDialogVisible = true },
                     onConsumedAmountClick = { entry ->
                         inputDialogState = InputDialogState.Number(
-                            title = stringResource(id = R.string.food_edit_consumed_amount),
+                            title = editConsumedAmountTitle,
                             initialValue = entry.consumedAmount,
                             onConfirmValue = { value -> viewModel.onConsumedAmountEdited(entry.id, value) }
                         )
                     },
+
                     onCopyFromYesterdayClick = viewModel::onCopyFromYesterdayClicked,
                     onRemoveEntryClick = { entry -> viewModel.onRemoveEntry(entry.id) }
                 )

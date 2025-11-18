@@ -82,19 +82,31 @@ class FoodRepositoryImpl(private val foodDao: FoodDao) : FoodRepository {
         foodDao.updateFoodItem(current.copy(carbBase = newCarb))
     }
 
-    override suspend fun addEntryForFood(userName: String, date: LocalDate, foodId: Long): DailyFoodEntry {
+    override suspend fun addEntryForFood(
+        userName: String,
+        date: LocalDate,
+        foodId: Long
+    ): DailyFoodEntry {
         val food = foodDao.getFoodItemById(foodId)?.toDomain()
             ?: throw IllegalArgumentException("Food item not found")
-        val entity = DailyFoodEntry(
+
+        // 1) Creamos el modelo de dominio
+        val domainEntry = DailyFoodEntry(
             id = 0L,
             userName = userName,
             date = date,
             foodItem = food,
             consumedAmount = food.baseAmount
-        ).toEntity()
+        )
+
+        // 2) Lo convertimos a entidad y lo insertamos
+        val entity = domainEntry.toEntity()
         val id = foodDao.insertDailyFoodEntry(entity)
-        return entity.copy(id = id).toDomain().copy(foodItem = food)
+
+        // 3) Devolvemos el modelo de dominio con el id asignado
+        return domainEntry.copy(id = id)
     }
+
 
     override suspend fun updateConsumedAmount(entryId: Long, newAmount: Double) {
         val current = foodDao.getDailyFoodEntryById(entryId) ?: return

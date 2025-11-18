@@ -71,27 +71,37 @@ class FoodViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    val uiState: StateFlow<FoodUiState> = combine(
-        selectedTab,
-        catalogFlow,
-        entriesFlow,
-        summaryFlow,
-        weeklyCaloriesFlow,
-        isCopyVisibleFlow
-    ) { tab, catalog, entries, summary, weeklyCalories, copyVisible ->
-        FoodUiState(
-            currentTab = tab,
-            catalog = catalog.map(FoodItem::toUiModel),
-            todayEntries = entries.map(DailyFoodEntry::toUiModel),
-            todaySummary = summary?.toUiModel(),
-            weeklyCalories = weeklyCalories.map(WeeklyCaloriesPoint::toUiModel),
-            isCopyFromYesterdayVisible = copyVisible
+    val uiState: StateFlow<FoodUiState> =
+        combine(
+            selectedTab,
+            catalogFlow,
+            entriesFlow,
+            summaryFlow,
+            weeklyCaloriesFlow,
+            isCopyVisibleFlow
+        ) { values ->
+            // values es Array<Any?>
+            val tab = values[0] as FoodTab
+            val catalog = values[1] as List<FoodItem>
+            val entries = values[2] as List<DailyFoodEntry>
+            val summary = values[3] as DailyNutritionSummary?
+            val weeklyCalories = values[4] as List<WeeklyCaloriesPoint>
+            val copyVisible = values[5] as Boolean
+
+            FoodUiState(
+                currentTab = tab,
+                catalog = catalog.map(FoodItem::toUiModel),
+                todayEntries = entries.map(DailyFoodEntry::toUiModel),
+                todaySummary = summary?.toUiModel(),
+                weeklyCalories = weeklyCalories.map(WeeklyCaloriesPoint::toUiModel),
+                isCopyFromYesterdayVisible = copyVisible
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            FoodUiState()
         )
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        FoodUiState()
-    )
+
 
     fun setActiveUser(userName: String) {
         activeUserName.value = userName
