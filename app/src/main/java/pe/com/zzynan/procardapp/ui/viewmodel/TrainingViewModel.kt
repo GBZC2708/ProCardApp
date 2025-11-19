@@ -136,106 +136,145 @@ class TrainingViewModel(
         } ?: "00:00:00"
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "00:00:00")
 
-    private val sessionUiFlow: StateFlow<TrainingSessionUiModel> = combine(
-        isSessionVisibleFlow,
-        isViewerModeFlow,
-        previewRoutineDayFlow,
-        sessionFlow,
-        sessionRoutineFlow,
-        sessionSetsFlow,
-        statsFlow,
-        timerTextFlow,
-        statusMessageFlow
-    ) { visible, viewer, previewDay, session, routineDay, sets, stats, timerText, statusMessage ->
-        if (!visible) {
-            TrainingSessionUiModel()
-        } else if (previewDay != null) {
-            TrainingSessionUiModel(
-                isVisible = true,
-                isReadOnly = true,
-                isPreview = true,
-                dayLabel = dayTitle(previewDay),
-                timerText = "00:00:00",
-                statusText = "Solo visualización",
-                exercises = previewDay.exercises.map { exercise ->
-                    SessionExerciseUiModel(
-                        exerciseId = exercise.exercise.id,
-                        name = exercise.exercise.name,
-                        muscleGroup = exercise.exercise.muscleGroup,
-                        sets = buildPreviewSets(exercise)
-                    )
-                },
-                showFinishButton = false
-            )
-        } else if (session != null && routineDay != null) {
-            val statsMap = stats.associateBy { it.exerciseId to it.setIndex }
-            val setsByExercise = sets.groupBy { it.exerciseId }
-            val exercises = routineDay.exercises.map { routineExercise ->
-                val exerciseSets = setsByExercise[routineExercise.exercise.id] ?: emptyList()
+    private val sessionUiFlow: StateFlow<TrainingSessionUiModel> =
+        combine(
+            isSessionVisibleFlow,
+            isViewerModeFlow,
+            previewRoutineDayFlow,
+            sessionFlow,
+            sessionRoutineFlow,
+            sessionSetsFlow,
+            statsFlow,
+            timerTextFlow,
+            statusMessageFlow,
+        ) { args: Array<Any?> ->
+            val visible = args[0] as Boolean
+            val viewer = args[1] as Boolean
+            val previewDay = args[2] as RoutineDay?
+            val session = args[3] as WorkoutSession?
+            val routineDay = args[4] as RoutineDay?
+            @Suppress("UNCHECKED_CAST")
+            val sets = args[5] as List<pe.com.zzynan.procardapp.domain.model.WorkoutSetEntry>
+            @Suppress("UNCHECKED_CAST")
+            val stats = args[6] as List<pe.com.zzynan.procardapp.domain.model.ExerciseSetStats>
+            val timerText = args[7] as String
+            val statusMessage = args[8] as String
+
+            if (!visible) {
+                TrainingSessionUiModel()
+            } else if (previewDay != null) {
+                TrainingSessionUiModel(
+                    isVisible = true,
+                    isReadOnly = true,
+                    isPreview = true,
+                    dayLabel = dayTitle(previewDay),
+                    timerText = "00:00:00",
+                    statusText = "Solo visualización",
+                    exercises = previewDay.exercises.map { exercise ->
                         SessionExerciseUiModel(
-                            exerciseId = routineExercise.exercise.id,
-                            name = routineExercise.exercise.name,
-                            muscleGroup = routineExercise.exercise.muscleGroup,
-                            sets = exerciseSets.map { set ->
-                                WorkoutSetUiModel(
-                                    id = set.id,
-                                    setIndex = set.setIndex,
-                                    label = set.setIndex.toString(),
-                                    bestLabel = bestLabel(statsMap[set.exerciseId to set.setIndex]),
-                                    weightText = formatWeightInput(set.weight),
-                                    repsText = set.reps?.toString() ?: "",
-                                    isCompleted = set.isCompleted,
-                                    isEditable = !viewer && !set.isCompleted
+                            exerciseId = exercise.exercise.id,
+                            name = exercise.exercise.name,
+                            muscleGroup = exercise.exercise.muscleGroup,
+                            sets = buildPreviewSets(exercise)
                         )
-                    }
+                    },
+                    showFinishButton = false
                 )
+            } else if (session != null && routineDay != null) {
+                val statsMap = stats.associateBy { it.exerciseId to it.setIndex }
+                val setsByExercise = sets.groupBy { it.exerciseId }
+
+                val exercises = routineDay.exercises.map { routineExercise ->
+                    val exerciseSets = setsByExercise[routineExercise.exercise.id] ?: emptyList()
+                    SessionExerciseUiModel(
+                        exerciseId = routineExercise.exercise.id,
+                        name = routineExercise.exercise.name,
+                        muscleGroup = routineExercise.exercise.muscleGroup,
+                        sets = exerciseSets.map { set ->
+                            WorkoutSetUiModel(
+                                id = set.id,
+                                setIndex = set.setIndex,
+                                label = set.setIndex.toString(),
+                                bestLabel = bestLabel(statsMap[set.exerciseId to set.setIndex]),
+                                weightText = formatWeightInput(set.weight),
+                                repsText = set.reps?.toString() ?: "",
+                                isCompleted = set.isCompleted,
+                                isEditable = !viewer && !set.isCompleted
+                            )
+                        }
+                    )
+                }
+
+                TrainingSessionUiModel(
+                    isVisible = true,
+                    isReadOnly = viewer,
+                    isPreview = false,
+                    dayLabel = session.dayLabelSnapshot,
+                    timerText = if (viewer) "00:00:00" else timerText,
+                    statusText = if (statusMessage.isNotEmpty()) {
+                        statusMessage
+                    } else {
+                        when (session.status) {
+                            WorkoutSessionStatus.IN_PROGRESS -> "Sesión en progreso"
+                            WorkoutSessionStatus.COMPLETED -> "Entrenamiento completado"
+                        }
+                    },
+                    exercises = exercises,
+                    showFinishButton = !viewer && session.status == WorkoutSessionStatus.IN_PROGRESS
+                )
+            } else {
+                TrainingSessionUiModel()
             }
-            TrainingSessionUiModel(
-                isVisible = true,
-                isReadOnly = viewer,
-                isPreview = false,
-                dayLabel = session.dayLabelSnapshot,
-                timerText = if (viewer) "00:00:00" else timerText,
-                statusText = statusMessage.ifEmpty {
-                    when (session.status) {
-                        WorkoutSessionStatus.IN_PROGRESS -> "Sesión en progreso"
-                        WorkoutSessionStatus.COMPLETED -> "Entrenamiento completado"
-                    }
-                },
-                exercises = exercises,
-                showFinishButton = !viewer && session.status == WorkoutSessionStatus.IN_PROGRESS
-            )
-        } else {
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
             TrainingSessionUiModel()
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TrainingSessionUiModel())
+        )
 
     val finishDialogVisible: StateFlow<Boolean> = finishDialogFlow
 
-    val uiState: StateFlow<TrainingUiState> = combine(
-        selectedTabFlow,
-        exercisesDomainFlow,
-        routineDomainFlow,
-        trainingDaysDomainFlow,
-        exerciseEditorFlow,
-        isRoutineDialogVisibleFlow,
-        trainingDayDialogFlow,
-        sessionUiFlow,
-        statusMessageFlow
-    ) { tab, exercises, routine, trainingDays, editor, routineDialog, dayDialog, sessionUi, statusMessage ->
-        TrainingUiState(
-            selectedTab = tab,
-            exercises = exercises.map { it.toUiModel() },
-            muscleGroups = TrainingMuscleGroups,
-            exerciseEditor = editor,
-            routineDays = routine.sortedBy { it.dayOfWeek }.map { it.toUiModel() },
-            isRoutineDialogVisible = routineDialog,
-            trainingDays = trainingDays.sortedBy { it.routineDay.dayOfWeek }.map { it.toUiModel() },
-            trainingDayDialog = dayDialog,
-            sessionUi = sessionUi,
-            statusMessage = statusMessage
+    val uiState: StateFlow<TrainingUiState> =
+        combine(
+            selectedTabFlow,
+            exercisesDomainFlow,
+            routineDomainFlow,
+            trainingDaysDomainFlow,
+            exerciseEditorFlow,
+            isRoutineDialogVisibleFlow,
+            trainingDayDialogFlow,
+            sessionUiFlow,
+            statusMessageFlow,
+        ) { args: Array<Any?> ->
+            val tab = args[0] as TrainingTab
+            @Suppress("UNCHECKED_CAST")
+            val exercisesDomain = args[1] as List<pe.com.zzynan.procardapp.domain.model.WorkoutExercise>
+            @Suppress("UNCHECKED_CAST")
+            val routine = args[2] as List<RoutineDay>
+            @Suppress("UNCHECKED_CAST")
+            val trainingDays = args[3] as List<TrainingDayStatus>
+            val editor = args[4] as ExerciseEditorUiModel
+            val routineDialog = args[5] as Boolean
+            val dayDialog = args[6] as TrainingDayDialogState?
+            val sessionUi = args[7] as TrainingSessionUiModel
+            val statusMessage = args[8] as String
+
+            TrainingUiState(
+                selectedTab = tab,
+                exercises = exercisesDomain.map { it.toUiModel() },
+                muscleGroups = TrainingMuscleGroups,
+                exerciseEditor = editor,
+                routineDays = routine.sortedBy { it.dayOfWeek }.map { it.toUiModel() },
+                isRoutineDialogVisible = routineDialog,
+                trainingDays = trainingDays.sortedBy { it.routineDay.dayOfWeek }.map { it.toUiModel() },
+                trainingDayDialog = dayDialog,
+                sessionUi = sessionUi,
+                statusMessage = statusMessage
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            TrainingUiState()
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, TrainingUiState())
 
     init {
         viewModelScope.launch {

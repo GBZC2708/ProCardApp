@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import pe.com.zzynan.procardapp.data.local.dao.TrainingDao
 import pe.com.zzynan.procardapp.data.local.entity.RoutineDayEntity
+import pe.com.zzynan.procardapp.data.local.entity.RoutineExerciseEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutExerciseEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSessionEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
@@ -148,7 +149,10 @@ class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository 
                     WorkoutSessionStatus.COMPLETED -> TrainingDayState.COMPLETED
                     null -> TrainingDayState.NOT_STARTED
                 }
-                TrainingDayStatus(day = day, status = status, activeSession = session)
+                TrainingDayStatus(
+                    routineDay = day,
+                    status = status,
+                    activeSession = session)
             }
         }
     }
