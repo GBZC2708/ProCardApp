@@ -13,13 +13,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import pe.com.zzynan.procardapp.ui.screens.FoodScreen
 import pe.com.zzynan.procardapp.ui.screens.CalculadoraScreen
-import pe.com.zzynan.procardapp.ui.screens.EntrenamientoScreen
 import pe.com.zzynan.procardapp.ui.screens.GraficosScreen
 import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
 import pe.com.zzynan.procardapp.ui.screens.SuplementacionScreen
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyMetricsViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.FoodViewModel
+import pe.com.zzynan.procardapp.ui.viewmodel.TrainingViewModel
+import pe.com.zzynan.procardapp.ui.screens.EntrenamientoScreen
 import androidx.compose.runtime.LaunchedEffect
 import java.time.LocalDate
 
@@ -81,8 +82,46 @@ fun ProcardNavHost(
             )
         }
         composable(ProcardScreen.Entrenamiento.route) {
-            // Contenido placeholder para la pantalla de entrenamiento.
-            EntrenamientoScreen()
+            val context = LocalContext.current
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(ProcardScreen.Registro.route)
+            }
+            val viewModel: TrainingViewModel = viewModel(
+                parentEntry,
+                factory = TrainingViewModel.provideFactory(context)
+            )
+            val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+            val finishDialog = viewModel.finishDialogVisible.collectAsStateWithLifecycle()
+            EntrenamientoScreen(
+                uiState = uiState.value,
+                finishDialogVisible = finishDialog.value,
+                onSelectTab = viewModel::onSelectTab,
+                onOpenAddExercise = viewModel::onOpenAddExercise,
+                onEditExercise = viewModel::onEditExercise,
+                onToggleExerciseActive = viewModel::onToggleExerciseActive,
+                onExerciseEditorNameChange = viewModel::onExerciseEditorNameChange,
+                onExerciseEditorGroupChange = viewModel::onExerciseEditorGroupChange,
+                onDismissExerciseEditor = viewModel::onDismissExerciseEditor,
+                onConfirmExerciseEditor = viewModel::onConfirmExerciseEditor,
+                onOpenRoutineDialog = viewModel::onOpenRoutineDialog,
+                onDismissRoutineDialog = viewModel::onDismissRoutineDialog,
+                onRoutineLabelChange = viewModel::onRoutineLabelChange,
+                onAddRoutineExercise = viewModel::onAddRoutineExercise,
+                onRemoveRoutineExercise = viewModel::onRemoveRoutineExercise,
+                onTrainingDaySelected = viewModel::onTrainingDaySelected,
+                onDismissTrainingDayDialog = viewModel::onDismissTrainingDayDialog,
+                onSoloVer = viewModel::onSoloVerSelected,
+                onStartTraining = viewModel::onStartTraining,
+                onCloseSession = viewModel::onCloseSessionScreen,
+                onSetWeightChange = viewModel::onSetWeightChange,
+                onSetRepsChange = viewModel::onSetRepsChange,
+                onToggleSetCompleted = viewModel::onToggleSetCompleted,
+                onAddSet = viewModel::onAddSet,
+                onRemoveSet = viewModel::onRemoveSet,
+                onShowFinishDialog = viewModel::onShowFinishDialog,
+                onDismissFinishDialog = viewModel::onDismissFinishDialog,
+                onConfirmFinish = viewModel::onConfirmFinishSession
+            )
         }
         composable(ProcardScreen.Suplementacion.route) {
             // Contenido placeholder para la pantalla de suplementación.

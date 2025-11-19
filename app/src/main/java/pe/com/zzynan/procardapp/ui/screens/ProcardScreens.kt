@@ -148,13 +148,6 @@ fun AlimentacionScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun EntrenamientoScreen(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize()) {
-        // TODO: agregar contenido de esta pantalla.
-    }
-}
-
-@Composable
 fun SuplementacionScreen(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize()) {
         // TODO: agregar contenido de esta pantalla.

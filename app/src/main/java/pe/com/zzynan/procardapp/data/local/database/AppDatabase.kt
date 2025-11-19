@@ -7,11 +7,18 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import pe.com.zzynan.procardapp.data.local.dao.DailyMetricsDao
 import pe.com.zzynan.procardapp.data.local.dao.FoodDao
+import pe.com.zzynan.procardapp.data.local.dao.TrainingDao
 import pe.com.zzynan.procardapp.data.local.dao.UserProfileDao
-import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
 import pe.com.zzynan.procardapp.data.local.entity.DailyFoodEntryEntity
+import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
+import pe.com.zzynan.procardapp.data.local.entity.ExerciseSetStatsEntity
 import pe.com.zzynan.procardapp.data.local.entity.FoodItemEntity
+import pe.com.zzynan.procardapp.data.local.entity.RoutineDayEntity
+import pe.com.zzynan.procardapp.data.local.entity.RoutineExerciseEntity
 import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
+import pe.com.zzynan.procardapp.data.local.entity.WorkoutExerciseEntity
+import pe.com.zzynan.procardapp.data.local.entity.WorkoutSessionEntity
+import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
 
 /**
  * Base de datos de Room configurada como singleton para evitar múltiples instancias en memoria.
@@ -22,9 +29,15 @@ import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
         DailyMetricsEntity::class,
         UserProfileEntity::class,
         FoodItemEntity::class,
-        DailyFoodEntryEntity::class
+        DailyFoodEntryEntity::class,
+        WorkoutExerciseEntity::class,
+        RoutineDayEntity::class,
+        RoutineExerciseEntity::class,
+        WorkoutSessionEntity::class,
+        WorkoutSetEntryEntity::class,
+        ExerciseSetStatsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverters::class)
@@ -44,6 +57,11 @@ abstract class AppDatabase : RoomDatabase() {
      * Expone el DAO de alimentos y planificación diaria.
      */
     abstract fun foodDao(): FoodDao
+
+    /**
+     * Expone el DAO del módulo de entrenamiento.
+     */
+    abstract fun trainingDao(): TrainingDao
 
     companion object {
         @Volatile
