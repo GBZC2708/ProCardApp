@@ -5,6 +5,8 @@ import pe.com.zzynan.procardapp.data.local.database.AppDatabase
 import pe.com.zzynan.procardapp.data.repository.DailyMetricsRepository
 import pe.com.zzynan.procardapp.data.repository.FoodRepository
 import pe.com.zzynan.procardapp.data.repository.FoodRepositoryImpl
+import pe.com.zzynan.procardapp.data.repository.TrainingRepository
+import pe.com.zzynan.procardapp.data.repository.TrainingRepositoryImpl
 import pe.com.zzynan.procardapp.data.repository.UserProfileRepository
 
 /**
@@ -27,5 +29,10 @@ object ServiceLocator {
     fun provideFoodRepository(context: Context): FoodRepository {
         val database = provideDatabase(context)
         return FoodRepositoryImpl(database.foodDao())
+    }
+
+    fun provideTrainingRepository(context: Context): TrainingRepository {
+        val database = provideDatabase(context)
+        return TrainingRepositoryImpl(database.trainingDao())
     }
 }
