@@ -26,14 +26,45 @@ import pe.com.zzynan.procardapp.ui.mappers.toUiModel
 import pe.com.zzynan.procardapp.ui.model.FoodTab
 import pe.com.zzynan.procardapp.ui.model.FoodUiState
 
+
 class FoodViewModel(
-    private val foodRepository: FoodRepository
+    private val foodRepository: FoodRepository,
+    private val appContext: Context
 ) : ViewModel() {
 
     private val activeUserName = MutableStateFlow("")
     private val activeDate = MutableStateFlow(LocalDate.now())
     private val selectedTab = MutableStateFlow(FoodTab.TODAY_PLAN)
 
+    private val isTodaySaved = MutableStateFlow(false)
+
+    private val prefs = appContext.getSharedPreferences("food_prefs", Context.MODE_PRIVATE)
+
+    private fun savedKey(userName: String, date: LocalDate): String =
+        "food_saved_${userName}_${date}"  // date.toString() → yyyy-MM-dd
+
+    private fun loadSavedState(userName: String, date: LocalDate): Boolean {
+        if (userName.isBlank()) return false
+        return prefs.getBoolean(savedKey(userName, date), false)
+    }
+
+    private fun persistSavedState(userName: String, date: LocalDate, isSaved: Boolean) {
+        if (userName.isBlank()) return
+        prefs.edit().putBoolean(savedKey(userName, date), isSaved).apply()
+    }
+
+    private fun refreshSavedState() {
+        val user = activeUserName.value
+        val date = activeDate.value
+        isTodaySaved.value = loadSavedState(user, date)
+    }
+
+    private fun markUnsaved() {
+        isTodaySaved.value = false
+        val user = activeUserName.value
+        isTodaySaved.value = false
+        persistSavedState(user, activeDate.value, false)
+    }
     private val catalogFlow = activeUserName.flatMapLatest { user ->
         if (user.isBlank()) flowOf(emptyList()) else foodRepository.observeCatalog(user)
     }
@@ -78,7 +109,8 @@ class FoodViewModel(
             entriesFlow,
             summaryFlow,
             weeklyCaloriesFlow,
-            isCopyVisibleFlow
+            isCopyVisibleFlow,
+            isTodaySaved
         ) { values ->
             // values es Array<Any?>
             val tab = values[0] as FoodTab
@@ -87,6 +119,7 @@ class FoodViewModel(
             val summary = values[3] as DailyNutritionSummary?
             val weeklyCalories = values[4] as List<WeeklyCaloriesPoint>
             val copyVisible = values[5] as Boolean
+            val isSaved = values[6] as Boolean
 
             FoodUiState(
                 currentTab = tab,
@@ -94,7 +127,9 @@ class FoodViewModel(
                 todayEntries = entries.map(DailyFoodEntry::toUiModel),
                 todaySummary = summary?.toUiModel(),
                 weeklyCalories = weeklyCalories.map(WeeklyCaloriesPoint::toUiModel),
-                isCopyFromYesterdayVisible = copyVisible
+                isCopyFromYesterdayVisible = copyVisible,
+                hasEntriesToday = entries.isNotEmpty(),
+                isTodaySaved = isSaved
             )
         }.stateIn(
             viewModelScope,
@@ -105,10 +140,12 @@ class FoodViewModel(
 
     fun setActiveUser(userName: String) {
         activeUserName.value = userName
+        refreshSavedState()
     }
 
     fun setActiveDate(date: LocalDate) {
         activeDate.value = date
+        refreshSavedState()
     }
 
     fun onTabSelected(tab: FoodTab) {
@@ -153,12 +190,14 @@ class FoodViewModel(
             val user = activeUserName.value
             if (user.isNotBlank()) {
                 foodRepository.addEntryForFood(user, activeDate.value, foodId)
+                markUnsaved()
             }
         }
     }
 
     fun onConsumedAmountEdited(entryId: Long, newAmount: Double) {
         viewModelScope.launch { foodRepository.updateConsumedAmount(entryId, newAmount) }
+        markUnsaved()
     }
 
     fun onCopyFromYesterdayClicked() {
@@ -166,20 +205,39 @@ class FoodViewModel(
             val user = activeUserName.value
             if (user.isNotBlank()) {
                 foodRepository.copyFromYesterday(user, activeDate.value)
+                markUnsaved()
             }
         }
     }
 
     fun onRemoveEntry(entryId: Long) {
         viewModelScope.launch { foodRepository.deleteEntry(entryId) }
+        markUnsaved()
     }
+
+    fun onSaveTodayClicked() {
+        val user = activeUserName.value
+        if (user.isNotBlank()) {
+            isTodaySaved.value = true
+            persistSavedState(user, activeDate.value, true)
+        }
+    }
+
+   fun onDeleteFood(id: Long) {
+               viewModelScope.launch {
+                      foodRepository.deleteFood(id)
+                  }
+           }
+
+
 
     companion object {
         fun provideFactory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                val appContext = context.applicationContext
                 val repository = ServiceLocator.provideFoodRepository(context.applicationContext)
                 @Suppress("UNCHECKED_CAST")
-                return FoodViewModel(repository) as T
+                return FoodViewModel(repository, appContext) as T
             }
         }
     }

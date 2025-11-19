@@ -28,6 +28,8 @@ interface FoodRepository {
     suspend fun getWeeklyCalories(userName: String, endDate: LocalDate): List<WeeklyCaloriesPoint>
     suspend fun copyFromYesterday(userName: String, today: LocalDate)
     suspend fun hasEntries(userName: String, date: LocalDate): Boolean
+
+    suspend fun deleteFood(id: Long)
 }
 
 class FoodRepositoryImpl(private val foodDao: FoodDao) : FoodRepository {
@@ -160,6 +162,11 @@ class FoodRepositoryImpl(private val foodDao: FoodDao) : FoodRepository {
 
     override suspend fun hasEntries(userName: String, date: LocalDate): Boolean {
         return foodDao.getDailyFoodEntriesOnce(userName, date).isNotEmpty()
+    }
+
+    override suspend fun deleteFood(id: Long) {
+        val current = foodDao.getFoodItemById(id) ?: return
+        foodDao.deleteFoodItem(current)
     }
 
     private fun dayLabelFor(date: LocalDate): String = when (date.dayOfWeek) {

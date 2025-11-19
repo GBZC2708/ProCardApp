@@ -32,9 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -62,6 +59,15 @@ import pe.com.zzynan.procardapp.ui.model.FoodItemUiModel
 import pe.com.zzynan.procardapp.ui.model.FoodTab
 import pe.com.zzynan.procardapp.ui.viewmodel.FoodViewModel
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material.icons.filled.Save
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,19 +96,6 @@ fun FoodScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(id = R.string.food_screen_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Filled.Restaurant,
-                            contentDescription = stringResource(id = R.string.food_screen_title)
-                        )
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             if (uiState.currentTab == FoodTab.TODAY_PLAN) {
                 FloatingActionButton(onClick = { isAddEntryDialogVisible = true }) {
@@ -114,9 +107,15 @@ fun FoodScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(
+                    start = 0.dp,
+                    end = 0.dp,
+                    bottom = innerPadding.calculateBottomPadding()
+                )
         ) {
-            FoodTabs(
+            // separa de "Hola, Atleta"
+            Spacer(modifier = Modifier.height(8.dp))
+               FoodTabs(
                 selectedTab = uiState.currentTab,
                 onTabSelected = viewModel::onTabSelected
             )
@@ -131,6 +130,8 @@ fun FoodScreen(
                             onConfirmText = { value -> viewModel.onEditName(item.id, value) }
                         )
                     },
+                    onDeleteItemClick = { item -> viewModel.onDeleteFood(item.id) },
+
                     onEditBaseAmountClick = { item ->
                         inputDialogState = InputDialogState.Number(
                             title = editBaseAmountTitle,
@@ -148,21 +149,21 @@ fun FoodScreen(
                     onEditProteinClick = { item ->
                         inputDialogState = InputDialogState.Number(
                             title = editProteinTitle,
-                            initialValue = item.protein,
+                            initialValue = item.protein.numericPart(),   // solo número
                             onConfirmValue = { value -> viewModel.onEditProtein(item.id, value) }
                         )
                     },
                     onEditFatClick = { item ->
                         inputDialogState = InputDialogState.Number(
                             title = editFatTitle,
-                            initialValue = item.fat,
+                            initialValue = item.fat.numericPart(),       // solo número
                             onConfirmValue = { value -> viewModel.onEditFat(item.id, value) }
                         )
                     },
                     onEditCarbClick = { item ->
                         inputDialogState = InputDialogState.Number(
                             title = editCarbTitle,
-                            initialValue = item.carb,
+                            initialValue = item.carb.numericPart(),      // solo número
                             onConfirmValue = { value -> viewModel.onEditCarb(item.id, value) }
                         )
                     }
@@ -172,6 +173,8 @@ fun FoodScreen(
                     entries = uiState.todayEntries,
                     summary = uiState.todaySummary,
                     isCopyFromYesterdayVisible = uiState.isCopyFromYesterdayVisible,
+                    hasEntriesToday = uiState.hasEntriesToday,
+                    isTodaySaved = uiState.isTodaySaved,
                     onAddEntryClick = { isAddEntryDialogVisible = true },
                     onConsumedAmountClick = { entry ->
                         inputDialogState = InputDialogState.Number(
@@ -182,6 +185,7 @@ fun FoodScreen(
                     },
 
                     onCopyFromYesterdayClick = viewModel::onCopyFromYesterdayClicked,
+                    onSaveTodayClick = viewModel::onSaveTodayClicked,
                     onRemoveEntryClick = { entry -> viewModel.onRemoveEntry(entry.id) }
                 )
             }
@@ -208,25 +212,68 @@ fun FoodScreen(
 }
 
 @Composable
-private fun FoodTabs(selectedTab: FoodTab, onTabSelected: (FoodTab) -> Unit) {
+private fun FoodTabs(
+    selectedTab: FoodTab,
+    onTabSelected: (FoodTab) -> Unit
+) {
     val tabs = listOf(FoodTab.TODAY_PLAN, FoodTab.CATALOG)
-    TabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
-        tabs.forEach { tab ->
-            val icon = if (tab == FoodTab.CATALOG) Icons.Filled.Restaurant else Icons.Filled.Today
-            val contentDescription = if (tab == FoodTab.CATALOG) {
-                stringResource(id = R.string.food_catalog_tab_cd)
-            } else {
-                stringResource(id = R.string.food_plan_tab_cd)
+
+    Column {
+        // Fila de íconos (compacta)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp), // altura total del área de tabs
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            tabs.forEach { tab ->
+                val iconVector =
+                    if (tab == FoodTab.CATALOG) Icons.Filled.Restaurant else Icons.Filled.Today
+                val contentDescription = if (tab == FoodTab.CATALOG) {
+                    stringResource(id = R.string.food_catalog_tab_cd)
+                } else {
+                    stringResource(id = R.string.food_plan_tab_cd)
+                }
+
+                Icon(
+                    imageVector = iconVector,
+                    contentDescription = contentDescription,
+                    tint = if (tab == selectedTab)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(22.dp)           // icono pequeño → más compacto
+                        .clickable { onTabSelected(tab) }
+                )
             }
-            Tab(
-                selected = tab == selectedTab,
-                onClick = { onTabSelected(tab) },
-                text = {},
-                icon = { Icon(imageVector = icon, contentDescription = contentDescription) }
-            )
+        }
+
+        // Línea indicadora justo debajo de los íconos
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+        ) {
+            tabs.forEach { tab ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(
+                            if (tab == selectedTab)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                Color.Transparent
+                        )
+                )
+            }
         }
     }
 }
+
+
 
 @Composable
 fun FoodCatalogSection(
@@ -237,7 +284,8 @@ fun FoodCatalogSection(
     onEditBaseUnitClick: (FoodItemUiModel) -> Unit,
     onEditProteinClick: (FoodItemUiModel) -> Unit,
     onEditFatClick: (FoodItemUiModel) -> Unit,
-    onEditCarbClick: (FoodItemUiModel) -> Unit
+    onEditCarbClick: (FoodItemUiModel) -> Unit,
+    onDeleteItemClick: (FoodItemUiModel) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -269,7 +317,7 @@ fun FoodCatalogSection(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp),verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = item.baseAmount,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -281,6 +329,9 @@ fun FoodCatalogSection(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.clickable { onEditBaseUnitClick(item) }
                                 )
+                                IconButton(onClick = { onDeleteItemClick(item) }) {
+                                    Icon(imageVector = Icons.Filled.Delete, contentDescription = null)
+                                }
                             }
                         }
                         Row(
@@ -329,27 +380,32 @@ fun TodayFoodPlanSection(
     entries: List<DailyFoodEntryUiModel>,
     summary: DailyNutritionSummaryUiModel?,
     isCopyFromYesterdayVisible: Boolean,
+    hasEntriesToday: Boolean,
+    isTodaySaved: Boolean,
     onAddEntryClick: () -> Unit,
     onConsumedAmountClick: (DailyFoodEntryUiModel) -> Unit,
     onCopyFromYesterdayClick: () -> Unit,
+    onSaveTodayClick: () -> Unit,
     onRemoveEntryClick: (DailyFoodEntryUiModel) -> Unit
 ) {
-    Column(
+
+    val statusText = when {
+        !hasEntriesToday -> "Sin alimentos registrados hoy"
+        !isTodaySaved -> "Alimentos sin guardar"
+        else -> "Guardado"
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(onClick = onAddEntryClick) {
-                Icon(imageVector = Icons.Filled.Add, contentDescription = stringResource(id = R.string.food_add_entry_cd))
-            }
-        }
+
+        // LISTA SCROLLEABLE
         LazyColumn(
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 30.dp), // espacio para el resumen fijo
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(entries) { entry ->
@@ -386,73 +442,103 @@ fun TodayFoodPlanSection(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 IconButton(onClick = { onRemoveEntryClick(entry) }) {
-                                    Icon(imageVector = Icons.Filled.Delete, contentDescription = null)
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = null
+                                    )
                                 }
                             }
                         }
+
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            MacroChip(
-                                label = entry.protein,
-                                icon = Icons.Filled.FitnessCenter,
-                                enabled = false
-                            )
-                            MacroChip(
-                                label = entry.fat,
-                                icon = Icons.Filled.Opacity,
-                                enabled = false
-                            )
-                            MacroChip(
-                                label = entry.carb,
-                                icon = Icons.Filled.Grain,
-                                enabled = false
-                            )
-                            MacroChip(
-                                label = entry.calories,
-                                icon = Icons.Filled.LocalFireDepartment,
-                                enabled = false
-                            )
+                            MacroChip(entry.protein, Icons.Filled.FitnessCenter, false)
+                            MacroChip(entry.fat, Icons.Filled.Opacity, false)
+                            MacroChip(entry.carb, Icons.Filled.Grain, false)
+                            MacroChip(entry.calories, Icons.Filled.LocalFireDepartment, false)
                         }
                     }
                 }
             }
-            item { Spacer(modifier = Modifier.height(60.dp)) }
+
+            item { Spacer(Modifier.height(4.dp)) }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // Franja fija inferior: entre el FAB y el bottom nav
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .offset(y = 35.dp)
+                .padding(bottom = 0.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            summary?.let {
+            // Fila de estado + botones (respeta hueco del FAB)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 88.dp), // hueco bajo el FAB
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row {
+                    if (isCopyFromYesterdayVisible) {
+                        IconButton(onClick = onCopyFromYesterdayClick) {
+                            Icon(
+                                imageVector = Icons.Filled.ContentCopy,
+                                contentDescription = "Copiar desde ayer"
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onSaveTodayClick,
+                        enabled = hasEntriesToday
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Save,
+                            contentDescription = "Guardar alimentos de hoy"
+                        )
+                    }
+                }
+            }
+
+            // Card de macros/calorías a TODO el ancho
+            summary?.let { totals ->
                 Card(
-                    modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(50)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = it.protein, style = MaterialTheme.typography.bodySmall)
-                        Text(text = it.fat, style = MaterialTheme.typography.bodySmall)
-                        Text(text = it.carb, style = MaterialTheme.typography.bodySmall)
-                        Text(text = it.calories, style = MaterialTheme.typography.bodySmall)
+                        Text(totals.protein, style = MaterialTheme.typography.bodyMedium)
+                        Text(totals.fat, style = MaterialTheme.typography.bodyMedium)
+                        Text(totals.carb, style = MaterialTheme.typography.bodyMedium)
+                        Text(totals.calories, style = MaterialTheme.typography.bodyMedium)
                     }
-                }
-            }
-            if (isCopyFromYesterdayVisible) {
-                IconButton(onClick = onCopyFromYesterdayClick) {
-                    Icon(imageVector = Icons.Filled.ContentCopy, contentDescription = stringResource(id = R.string.food_copy_cd))
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 private fun MacroChip(
@@ -478,32 +564,51 @@ private fun MacroChip(
 }
 
 @Composable
-private fun FoodInputDialog(state: InputDialogState, onDismiss: () -> Unit) {
+private fun FoodInputDialog(
+    state: InputDialogState,
+    onDismiss: () -> Unit
+) {
     var text by remember(state) { mutableStateOf(state.initialValue) }
+
+    fun applyAndDismiss() {
+        when (state) {
+            is InputDialogState.Number -> state.onConfirmValue(text.parseNumber())
+            is InputDialogState.Text -> state.onConfirmText(text.trim())
+        }
+        onDismiss()
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                when (state) {
-                    is InputDialogState.Number -> state.onConfirmValue(text.parseNumber())
-                    is InputDialogState.Text -> state.onConfirmText(text)
-                }
-                onDismiss()
-            }) {
-                Text(text = stringResource(id = R.string.food_dialog_confirm))
-            }
-        },
-        title = { Text(text = state.title) },
-        text = {
-            TextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = state.keyboardType)
+        onDismissRequest = { applyAndDismiss() },
+        // sin botones visibles
+        confirmButton = {},
+        title = {
+            Text(
+                text = state.title,
+                style = MaterialTheme.typography.titleMedium
             )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = state.keyboardType,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { applyAndDismiss() }
+                    )
+                )
+            }
         }
     )
 }
+
 
 @Composable
 private fun FoodPickerDialog(
@@ -549,4 +654,9 @@ private sealed class InputDialogState(
 private fun String.parseNumber(): Double {
     val normalized = replace(",", ".").substringBefore(" ")
     return normalized.toDoubleOrNull() ?: 0.0
+}
+
+private fun String.numericPart(): String {
+    // "12 g" -> "12", "12.5 g" -> "12.5"
+    return this.substringBefore(" ").replace(",", ".")
 }

@@ -43,5 +43,7 @@ data class FoodUiState(
     val todayEntries: List<DailyFoodEntryUiModel> = emptyList(),
     val todaySummary: DailyNutritionSummaryUiModel? = null,
     val weeklyCalories: List<WeeklyCaloriesPointUiModel> = emptyList(),
-    val isCopyFromYesterdayVisible: Boolean = false
+    val isCopyFromYesterdayVisible: Boolean = false,
+    val hasEntriesToday: Boolean = false,      // NUEVO
+    val isTodaySaved: Boolean = false
 )

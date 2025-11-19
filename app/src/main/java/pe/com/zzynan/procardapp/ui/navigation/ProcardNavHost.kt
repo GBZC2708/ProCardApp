@@ -97,34 +97,28 @@ fun ProcardNavHost(
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry(ProcardScreen.Registro.route)
             }
+
             val viewModel: DailyRegisterViewModel = viewModel(
                 parentEntry,
                 factory = DailyRegisterViewModel.provideFactory(context)
-            )
-            val metricsViewModel: DailyMetricsViewModel = viewModel(
-                parentEntry,
-                factory = DailyMetricsViewModel.provideFactory(context)
             )
             val foodViewModel: FoodViewModel = viewModel(
                 parentEntry,
                 factory = FoodViewModel.provideFactory(context)
             )
+
             val uiState = viewModel.uiState.collectAsStateWithLifecycle()
-            val weeklyMetricsUiState = metricsViewModel.weeklyMetricsUiState.collectAsStateWithLifecycle()
             val foodUiState = foodViewModel.uiState.collectAsStateWithLifecycle()
 
-            LaunchedEffect(uiState.value.userName) {
-                // sincroniza el usuario para que los gráficos lean los mismos datos que Registro
-                metricsViewModel.setActiveUsername(uiState.value.userName)
-                // opcional, pero recomendable: asegurar que el rango termine en hoy
-                metricsViewModel.setActiveDate(LocalDate.now())
+            LaunchedEffect(uiState.value.userName, uiState.value.dateEpoch) {
+                // sincroniza solo comida, los pasos/peso ya salen del DailyRegisterViewModel
                 foodViewModel.setActiveUser(uiState.value.userName)
-                foodViewModel.setActiveDate(LocalDate.now())
+                foodViewModel.setActiveDate(LocalDate.ofEpochDay(uiState.value.dateEpoch))
             }
 
             GraficosScreen(
-                weightPoints = weeklyMetricsUiState.value.weightPoints,
-                stepsPoints = weeklyMetricsUiState.value.stepsPoints,
+                weightPoints = uiState.value.weeklyMetrics.weightPoints,
+                stepsPoints = uiState.value.weeklyMetrics.stepsPoints,
                 caloriesPoints = foodUiState.value.weeklyCalories,
                 weightEditor = uiState.value.weightEditor,
                 onWeightPointSelected = viewModel::onChartWeightSelected,
@@ -135,5 +129,6 @@ fun ProcardNavHost(
                 onConfirmHistory = viewModel::onConfirmHistory
             )
         }
+
     }
 }
