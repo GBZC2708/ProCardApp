@@ -694,7 +694,12 @@ private fun SessionTopBar(title: String, timerText: String, onClose: () -> Unit)
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(timerText, style = MaterialTheme.typography.titleMedium)
+        Text(
+            timerText,
+            style = MaterialTheme.typography.headlineMedium, // 👈 más grande
+            fontWeight = FontWeight.Bold
+        )
+
         IconButton(onClick = onClose) {
             Icon(imageVector = Icons.Default.Close, contentDescription = null)
         }
@@ -774,7 +779,17 @@ private fun SetRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1.2f)) {
-            Text("${set.label} (${set.bestLabel})", fontWeight = FontWeight.SemiBold)
+            Row {
+                Text(
+                    set.label,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "  (${set.bestLabel})",
+                    style = MaterialTheme.typography.bodySmall, // 👈 más pequeño
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         OutlinedTextField(
             value = weightValue,
