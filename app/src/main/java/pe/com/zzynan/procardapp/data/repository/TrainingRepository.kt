@@ -33,6 +33,8 @@ interface TrainingRepository {
     suspend fun renameExercise(id: Int, newName: String)
     suspend fun changeMuscleGroup(id: Int, newGroup: String)
     suspend fun toggleExerciseActive(id: Int)
+
+    suspend fun deleteExercise(id: Int)
     fun observeRoutine(): Flow<List<RoutineDay>>
     suspend fun ensureRoutineDays()
     suspend fun updateRoutineLabel(dayId: Int, newLabel: String)
@@ -89,6 +91,10 @@ class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository 
         dao.updateExercise(current.copy(isActive = !current.isActive))
     }
 
+    override suspend fun deleteExercise(id: Int) {
+        val current = dao.getExerciseById(id) ?: return
+        dao.deleteExercise(current)
+    }
     override fun observeRoutine(): Flow<List<RoutineDay>> {
         return dao.observeRoutineDaysWithExercises()
             .map { list -> list.map { it.toDomain() } }

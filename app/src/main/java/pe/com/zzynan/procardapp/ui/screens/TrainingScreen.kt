@@ -69,6 +69,10 @@ import pe.com.zzynan.procardapp.ui.model.TrainingTab
 import pe.com.zzynan.procardapp.ui.model.TrainingUiState
 import pe.com.zzynan.procardapp.ui.model.WorkoutExerciseUiModel
 import pe.com.zzynan.procardapp.ui.model.WorkoutSetUiModel
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+
 
 @Composable
 fun EntrenamientoScreen(
@@ -99,7 +103,10 @@ fun EntrenamientoScreen(
     onRemoveSet: (Int) -> Unit,
     onShowFinishDialog: () -> Unit,
     onDismissFinishDialog: () -> Unit,
-    onConfirmFinish: () -> Unit
+    onConfirmFinish: () -> Unit,
+    onDeleteExercise: (Int) -> Unit,
+    onToggleTimerPause: () -> Unit,   // 👈 nuevo
+    onResetTimer: () -> Unit
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -114,7 +121,8 @@ fun EntrenamientoScreen(
                     onAddExercise = onOpenAddExercise,
                     onEditExercise = onEditExercise,
                     onToggleExerciseActive = onToggleExerciseActive,
-                    onOpenRoutine = onOpenRoutineDialog
+                    onOpenRoutine = onOpenRoutineDialog,
+                    onDeleteExercise = onDeleteExercise
                 )
                 TrainingTab.Train -> TrainingDaysTab(
                     trainingDays = uiState.trainingDays,
@@ -158,7 +166,9 @@ fun EntrenamientoScreen(
         onToggleSetCompleted = onToggleSetCompleted,
         onAddSet = onAddSet,
         onRemoveSet = onRemoveSet,
-        onShowFinishDialog = onShowFinishDialog
+        onShowFinishDialog = onShowFinishDialog,
+        onToggleTimerPause = onToggleTimerPause,
+        onResetTimer = onResetTimer
     )
 
     if (finishDialogVisible) {
@@ -202,7 +212,8 @@ private fun CatalogTab(
     onAddExercise: () -> Unit,
     onEditExercise: (WorkoutExerciseUiModel) -> Unit,
     onToggleExerciseActive: (Int) -> Unit,
-    onOpenRoutine: () -> Unit
+    onOpenRoutine: () -> Unit,
+    onDeleteExercise: (Int) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -260,7 +271,8 @@ private fun CatalogTab(
                             ExerciseMenu(
                                 exercise = exercise,
                                 onEdit = { onEditExercise(exercise) },
-                                onToggleActive = { onToggleExerciseActive(exercise.id) }
+                                onToggleActive = { onToggleExerciseActive(exercise.id) },
+                                onDelete = { onDeleteExercise(exercise.id) }
                             )
                         }
                     }
@@ -274,7 +286,8 @@ private fun CatalogTab(
 private fun ExerciseMenu(
     exercise: WorkoutExerciseUiModel,
     onEdit: () -> Unit,
-    onToggleActive: () -> Unit
+    onToggleActive: () -> Unit,
+    onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
@@ -296,10 +309,18 @@ private fun ExerciseMenu(
                     onToggleActive()
                 }
             )
+            DropdownMenuItem(
+                text = { Text("Eliminar") },
+                onClick = {
+                    expanded = false
+                    onDelete()
+                }
+            )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExerciseEditorDialog(
     uiModel: ExerciseEditorUiModel,
@@ -310,8 +331,13 @@ private fun ExerciseEditorDialog(
     onConfirm: () -> Unit
 ) {
     if (!uiModel.isVisible) return
+
+    // Si por alguna razón muscleGroups viniera vacío, evitamos crashear
+    val availableGroups = if (muscleGroups.isNotEmpty()) muscleGroups else listOf("Pecho")
+
     var expanded by remember { mutableStateOf(false) }
-    val group = uiModel.selectedGroup.ifEmpty { muscleGroups.firstOrNull().orEmpty() }
+    val group = uiModel.selectedGroup.ifEmpty { availableGroups.first() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(uiModel.title) },
@@ -323,19 +349,30 @@ private fun ExerciseEditorDialog(
                     label = { Text("Nombre") },
                     singleLine = true
                 )
-                Column {
-                    Text("Grupo muscular", style = MaterialTheme.typography.bodySmall)
+
+                // Selector de grupo muscular usando ExposedDropdownMenuBox
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
                     OutlinedTextField(
                         value = group,
                         onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Grupo muscular") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
                         modifier = Modifier
+                            .menuAnchor()
                             .fillMaxWidth()
-                            .clickable { expanded = true },
-                        enabled = true,
-                        readOnly = true
                     )
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        muscleGroups.forEach { option ->
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        availableGroups.forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option) },
                                 onClick = {
@@ -361,6 +398,7 @@ private fun ExerciseEditorDialog(
     )
 }
 
+
 @Composable
 private fun RoutineDialog(
     isVisible: Boolean,
@@ -385,10 +423,16 @@ private fun RoutineDialog(
                     style = MaterialTheme.typography.titleMedium
                 )
                 routineDays.forEach { day ->
+                    // Estado local por día: evita que el TextField dependa de day.label en cada recomposición
+                    var labelText by remember(day.id) { mutableStateOf(day.label) }
+
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                         OutlinedTextField(
-                            value = day.label,
-                            onValueChange = { onLabelChange(day.id, it) },
+                            value = labelText,
+                            onValueChange = { newValue ->
+                                labelText = newValue              // actualiza UI local
+                                onLabelChange(day.id, newValue)   // sincroniza con ViewModel/Room
+                            },
                             label = { Text(dayTitle(day.dayOfWeek)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -401,7 +445,10 @@ private fun RoutineDialog(
                             )
                         } else {
                             day.exercises.forEach { exercise ->
-                                RoutineExerciseRow(exercise = exercise, onRemove = { onRemoveExercise(exercise.id) })
+                                RoutineExerciseRow(
+                                    exercise = exercise,
+                                    onRemove = { onRemoveExercise(exercise.id) }
+                                )
                             }
                         }
                         RoutineAddExerciseButton(
@@ -412,6 +459,8 @@ private fun RoutineDialog(
                         Divider(modifier = Modifier.padding(top = 8.dp))
                     }
                 }
+
+
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier
@@ -555,7 +604,9 @@ private fun TrainingSessionOverlay(
     onToggleSetCompleted: (Int, Boolean) -> Unit,
     onAddSet: (Int) -> Unit,
     onRemoveSet: (Int) -> Unit,
-    onShowFinishDialog: () -> Unit
+    onShowFinishDialog: () -> Unit,
+    onToggleTimerPause: () -> Unit,   // 👈 NUEVO
+    onResetTimer: () -> Unit
 ) {
     AnimatedVisibility(visible = uiModel.isVisible) {
         Box(
@@ -570,7 +621,33 @@ private fun TrainingSessionOverlay(
                         timerText = uiModel.timerText,
                         onClose = onClose
                     )
-                LazyColumn(
+
+// 👇 Mostrar controles de timer siempre que no sea solo ver / preview
+                    if (!uiModel.isReadOnly && !uiModel.isPreview) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = onToggleTimerPause,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(if (uiModel.isTimerPaused) "Reanudar" else "Pausar")
+                            }
+                            FilledTonalButton(
+                                onClick = onResetTimer,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Reiniciar")
+                            }
+                        }
+                    }
+
+
+                    LazyColumn(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 16.dp),
@@ -660,14 +737,19 @@ private fun SessionExerciseCard(
                 }
             }
             exercise.sets.forEach { set ->
+                val fieldsReadOnly = isReadOnly || !set.isEditable
+                val checkboxReadOnly = isReadOnly
+
                 SetRow(
                     set = set,
-                    readOnly = !set.isEditable || isReadOnly,
+                    fieldsReadOnly = fieldsReadOnly,
+                    checkboxReadOnly = checkboxReadOnly,
                     onWeightChange = { onSetWeightChange(set.id, it) },
                     onRepsChange = { onSetRepsChange(set.id, it) },
                     onToggleCompleted = { onToggleCompleted(set.id, it) }
                 )
             }
+
         }
     }
 }
@@ -675,11 +757,16 @@ private fun SessionExerciseCard(
 @Composable
 private fun SetRow(
     set: WorkoutSetUiModel,
-    readOnly: Boolean,
+    fieldsReadOnly: Boolean,
+    checkboxReadOnly: Boolean,
     onWeightChange: (String) -> Unit,
     onRepsChange: (String) -> Unit,
     onToggleCompleted: (Boolean) -> Unit
 ) {
+    // 👉 Estado local para evitar saltos de cursor
+    var weightValue by remember(set.id, set.weightText) { mutableStateOf(set.weightText) }
+    var repsValue by remember(set.id, set.repsText) { mutableStateOf(set.repsText) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -690,35 +777,43 @@ private fun SetRow(
             Text("${set.label} (${set.bestLabel})", fontWeight = FontWeight.SemiBold)
         }
         OutlinedTextField(
-            value = set.weightText,
-            onValueChange = onWeightChange,
+            value = weightValue,
+            onValueChange = { newValue ->
+                weightValue = newValue              // UI local
+                if (!fieldsReadOnly) onWeightChange(newValue) // Sync con VM
+            },
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 4.dp),
-            enabled = !readOnly,
+            enabled = !fieldsReadOnly,
             singleLine = true,
             keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Decimal),
             label = { Text("Peso") }
         )
         Text("x", modifier = Modifier.padding(horizontal = 4.dp))
         OutlinedTextField(
-            value = set.repsText,
-            onValueChange = onRepsChange,
+            value = repsValue,
+            onValueChange = { newValue ->
+                repsValue = newValue
+                if (!fieldsReadOnly) onRepsChange(newValue)
+            },
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 4.dp),
-            enabled = !readOnly,
+            enabled = !fieldsReadOnly,
             singleLine = true,
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
             label = { Text("Reps") }
         )
         Checkbox(
             checked = set.isCompleted,
-            onCheckedChange = if (readOnly) null else onToggleCompleted,
+            onCheckedChange = if (checkboxReadOnly) null else onToggleCompleted,
             modifier = Modifier.padding(start = 8.dp)
         )
     }
 }
+
+
 
 private fun dayTitle(dayIndex: Int): String = when (dayIndex) {
     0 -> "Lunes"

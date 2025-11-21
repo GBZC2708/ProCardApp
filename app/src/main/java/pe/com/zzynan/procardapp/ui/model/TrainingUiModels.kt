@@ -76,7 +76,9 @@ data class TrainingSessionUiModel(
     val timerText: String = "00:00:00",
     val statusText: String = "",
     val exercises: List<SessionExerciseUiModel> = emptyList(),
-    val showFinishButton: Boolean = false
+    val showFinishButton: Boolean = false,
+    val isTimerPaused: Boolean = false,         // 👈 NUEVO
+    val canControlTimer: Boolean = false        // 👈 NUEVO
 )
 
 data class TrainingUiState(

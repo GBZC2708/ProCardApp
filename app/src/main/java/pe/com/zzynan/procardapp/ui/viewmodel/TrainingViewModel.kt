@@ -70,6 +70,11 @@ class TrainingViewModel(
     private val statusMessageFlow = MutableStateFlow("")
     private val finishDialogFlow = MutableStateFlow(false)
 
+    // Timer de sesión (solo UI, no toca la BD)
+    private val timerStartMillisFlow = MutableStateFlow<Long?>(null)
+    private val timerAccumulatedMillisFlow = MutableStateFlow(0L)
+    private val isTimerPausedFlow = MutableStateFlow(false)
+
     private val weekStart: LocalDate = LocalDate.now().with(DayOfWeek.MONDAY)
 
     private val exercisesDomainFlow = repository.observeExercises().stateIn(
@@ -125,15 +130,20 @@ class TrainingViewModel(
         }
     }
 
-    private val timerTextFlow = combine(sessionFlow, tickerFlow) { session, now ->
-        session?.let {
-            val elapsed = if (it.status == WorkoutSessionStatus.IN_PROGRESS) {
-                now - it.startedAt
-            } else {
-                it.durationMillis ?: 0L
-            }
-            formatDuration(elapsed)
-        } ?: "00:00:00"
+    private val timerTextFlow = combine(
+        timerStartMillisFlow,
+        timerAccumulatedMillisFlow,
+        isTimerPausedFlow,
+        tickerFlow
+    ) { startMillis, accumulated, paused, now ->
+        val elapsed = if (startMillis == null) {
+            accumulated
+        } else if (paused) {
+            accumulated
+        } else {
+            accumulated + (now - startMillis)
+        }
+        formatDuration(elapsed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "00:00:00")
 
     private val sessionUiFlow: StateFlow<TrainingSessionUiModel> =
@@ -147,6 +157,7 @@ class TrainingViewModel(
             statsFlow,
             timerTextFlow,
             statusMessageFlow,
+            isTimerPausedFlow
         ) { args: Array<Any?> ->
             val visible = args[0] as Boolean
             val viewer = args[1] as Boolean
@@ -347,6 +358,13 @@ class TrainingViewModel(
         }
     }
 
+    fun onDeleteExercise(id: Int) {
+        viewModelScope.launch {
+            repository.deleteExercise(id)
+            statusMessageFlow.value = "Ejercicio eliminado"
+        }
+    }
+
     fun onOpenRoutineDialog() {
         isRoutineDialogVisibleFlow.value = true
     }
@@ -422,8 +440,41 @@ class TrainingViewModel(
             previewRoutineDayFlow.value = null
             statusMessageFlow.value = if (forceNew) "Sesión en progreso" else "Reanudando sesión anterior"
             trainingDayDialogFlow.value = null
+
+            // 👇 Timer UI: arrancar desde 0 y sin pausa
+            timerAccumulatedMillisFlow.value = 0L
+            timerStartMillisFlow.value = System.currentTimeMillis()
+            isTimerPausedFlow.value = false
         }
     }
+
+    fun onToggleTimerPause() {
+        // Solo tiene sentido si hay sesión visible
+        if (!isSessionVisibleFlow.value) return
+
+        val currentlyPaused = isTimerPausedFlow.value
+        if (!currentlyPaused) {
+            // Pausar: acumular tiempo hasta ahora y detener start
+            val start = timerStartMillisFlow.value ?: System.currentTimeMillis()
+            val now = System.currentTimeMillis()
+            val elapsedSinceStart = now - start
+            timerAccumulatedMillisFlow.value += elapsedSinceStart.coerceAtLeast(0L)
+            timerStartMillisFlow.value = null
+            isTimerPausedFlow.value = true
+        } else {
+            // Reanudar
+            timerStartMillisFlow.value = System.currentTimeMillis()
+            isTimerPausedFlow.value = false
+        }
+    }
+
+    fun onResetTimer() {
+        if (!isSessionVisibleFlow.value) return
+        timerAccumulatedMillisFlow.value = 0L
+        timerStartMillisFlow.value = System.currentTimeMillis()
+        isTimerPausedFlow.value = false
+    }
+
 
     fun onCloseSessionScreen() {
         isSessionVisibleFlow.value = false

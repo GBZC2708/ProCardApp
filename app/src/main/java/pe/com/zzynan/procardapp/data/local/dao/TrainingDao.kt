@@ -31,6 +31,9 @@ interface TrainingDao {
     @Query("SELECT * FROM workout_exercises WHERE id = :id")
     suspend fun getExerciseById(id: Int): WorkoutExerciseEntity?
 
+    @Delete
+    suspend fun deleteExercise(entity: WorkoutExerciseEntity)
+
     @Transaction
     @Query("SELECT * FROM routine_days ORDER BY dayOfWeek ASC")
     fun observeRoutineDaysWithExercises(): Flow<List<RoutineDayWithExercises>>

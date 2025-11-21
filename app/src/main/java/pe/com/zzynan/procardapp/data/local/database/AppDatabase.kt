@@ -87,7 +87,6 @@ abstract class AppDatabase : RoomDatabase() {
                 "daily_metrics_db"
             )
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .fallbackToDestructiveMigration()
                 .build()
         }
     }

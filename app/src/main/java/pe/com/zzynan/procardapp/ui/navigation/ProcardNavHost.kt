@@ -120,8 +120,12 @@ fun ProcardNavHost(
                 onRemoveSet = viewModel::onRemoveSet,
                 onShowFinishDialog = viewModel::onShowFinishDialog,
                 onDismissFinishDialog = viewModel::onDismissFinishDialog,
-                onConfirmFinish = viewModel::onConfirmFinishSession
+                onConfirmFinish = viewModel::onConfirmFinishSession,
+                onDeleteExercise = viewModel::onDeleteExercise,
+                onToggleTimerPause = viewModel::onToggleTimerPause,
+                onResetTimer = viewModel::onResetTimer
             )
+
         }
         composable(ProcardScreen.Suplementacion.route) {
             // Contenido placeholder para la pantalla de suplementación.
