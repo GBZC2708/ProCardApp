@@ -72,7 +72,9 @@ import pe.com.zzynan.procardapp.ui.model.WorkoutSetUiModel
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.foundation.lazy.itemsIndexed
 
 @Composable
 fun EntrenamientoScreen(
@@ -106,7 +108,9 @@ fun EntrenamientoScreen(
     onConfirmFinish: () -> Unit,
     onDeleteExercise: (Int) -> Unit,
     onToggleTimerPause: () -> Unit,   // 👈 nuevo
-    onResetTimer: () -> Unit
+    onResetTimer: () -> Unit,
+    onMoveRoutineExerciseUp: (Int) -> Unit,      // 👈 nuevo
+    onMoveRoutineExerciseDown: (Int) -> Unit
 ) {
     Scaffold { innerPadding ->
         Column(
@@ -148,7 +152,9 @@ fun EntrenamientoScreen(
         onDismiss = onDismissRoutineDialog,
         onLabelChange = onRoutineLabelChange,
         onAddExercise = onAddRoutineExercise,
-        onRemoveExercise = onRemoveRoutineExercise
+        onRemoveExercise = onRemoveRoutineExercise,
+        onMoveExerciseUp = onMoveRoutineExerciseUp,
+        onMoveExerciseDown = onMoveRoutineExerciseDown
     )
 
     TrainingDayDialog(
@@ -407,7 +413,9 @@ private fun RoutineDialog(
     onDismiss: () -> Unit,
     onLabelChange: (Int, String) -> Unit,
     onAddExercise: (Int, Int) -> Unit,
-    onRemoveExercise: (Int) -> Unit
+    onRemoveExercise: (Int) -> Unit,
+    onMoveExerciseUp: (Int) -> Unit,
+    onMoveExerciseDown: (Int) -> Unit
 ) {
     if (!isVisible) return
     Dialog(onDismissRequest = onDismiss) {
@@ -444,12 +452,18 @@ private fun RoutineDialog(
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         } else {
-                            day.exercises.forEach { exercise ->
+                            day.exercises.forEachIndexed { index, exercise ->
                                 RoutineExerciseRow(
+                                    index = index + 1,
+                                    isFirst = index == 0,
+                                    isLast = index == day.exercises.lastIndex,
                                     exercise = exercise,
+                                    onMoveUp = { onMoveExerciseUp(exercise.id) },
+                                    onMoveDown = { onMoveExerciseDown(exercise.id) },
                                     onRemove = { onRemoveExercise(exercise.id) }
                                 )
                             }
+
                         }
                         RoutineAddExerciseButton(
                             dayId = day.id,
@@ -475,22 +489,57 @@ private fun RoutineDialog(
 }
 
 @Composable
-private fun RoutineExerciseRow(exercise: RoutineExerciseUiModel, onRemove: () -> Unit) {
+private fun RoutineExerciseRow(
+    index: Int,
+    isFirst: Boolean,
+    isLast: Boolean,
+    exercise: RoutineExerciseUiModel,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onRemove: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Text(
+            text = "$index.",
+            modifier = Modifier.padding(end = 8.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(exercise.name)
             Text(exercise.muscleGroup, style = MaterialTheme.typography.bodySmall)
         }
-        IconButton(onClick = onRemove) {
-            Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+        Row {
+            IconButton(
+                onClick = onMoveUp,
+                enabled = !isFirst
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowUpward,
+                    contentDescription = "Subir"
+                )
+            }
+            IconButton(
+                onClick = onMoveDown,
+                enabled = !isLast
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowDownward,
+                    contentDescription = "Bajar"
+                )
+            }
+            IconButton(onClick = onRemove) {
+                Icon(imageVector = Icons.Default.Delete, contentDescription = "Eliminar")
+            }
         }
     }
 }
+
 
 @Composable
 private fun RoutineAddExerciseButton(
@@ -646,25 +695,30 @@ private fun TrainingSessionOverlay(
                         }
                     }
 
-
                     LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(uiModel.exercises, key = { it.exerciseId }) { exercise ->
-                        SessionExerciseCard(
-                            exercise = exercise,
-                            isReadOnly = uiModel.isReadOnly,
-                            onSetWeightChange = onSetWeightChange,
-                            onSetRepsChange = onSetRepsChange,
-                            onToggleCompleted = onToggleSetCompleted,
-                            onAddSet = onAddSet,
-                            onRemoveSet = onRemoveSet
-                        )
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(
+                            items = uiModel.exercises,
+                            key = { _, item -> item.exerciseId }
+                        ) { index: Int, exercise: SessionExerciseUiModel ->
+                            SessionExerciseCard(
+                                index = index + 1,
+                                exercise = exercise,
+                                isReadOnly = uiModel.isReadOnly,
+                                onSetWeightChange = onSetWeightChange,
+                                onSetRepsChange = onSetRepsChange,
+                                onToggleCompleted = onToggleSetCompleted,
+                                onAddSet = onAddSet,
+                                onRemoveSet = onRemoveSet
+                            )
+                        }
                     }
-                }
+
+
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(uiModel.statusText, style = MaterialTheme.typography.bodySmall)
                         if (uiModel.showFinishButton) {
@@ -708,6 +762,7 @@ private fun SessionTopBar(title: String, timerText: String, onClose: () -> Unit)
 
 @Composable
 private fun SessionExerciseCard(
+    index: Int,
     exercise: SessionExerciseUiModel,
     isReadOnly: Boolean,
     onSetWeightChange: (Int, String) -> Unit,
@@ -715,7 +770,8 @@ private fun SessionExerciseCard(
     onToggleCompleted: (Int, Boolean) -> Unit,
     onAddSet: (Int) -> Unit,
     onRemoveSet: (Int) -> Unit
-) {
+)
+{
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -727,9 +783,16 @@ private fun SessionExerciseCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(exercise.name, fontWeight = FontWeight.SemiBold)
-                    Text(exercise.muscleGroup, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = "$index. ${exercise.name}",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        exercise.muscleGroup,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
+
                 if (!isReadOnly) {
                     Row {
                         IconButton(onClick = { onRemoveSet(exercise.exerciseId) }) {

@@ -57,6 +57,9 @@ interface TrainingRepository {
     fun observeStats(exerciseIds: List<Int>): Flow<List<ExerciseSetStats>>
     suspend fun upsertStats(stat: ExerciseSetStats)
     suspend fun getStats(exerciseId: Int, setIndex: Int): ExerciseSetStats?
+
+    suspend fun moveRoutineExerciseUp(entryId: Int)
+    suspend fun moveRoutineExerciseDown(entryId: Int)
 }
 
 class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository {
@@ -125,15 +128,21 @@ class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository 
 
     override suspend fun addExerciseToRoutine(dayId: Int, exerciseId: Int): RoutineExercise {
         val exercise = dao.getExerciseById(exerciseId) ?: throw IllegalArgumentException("Exercise not found")
+
+        val existing = dao.getRoutineExercisesForDay(dayId)
+        val nextOrder = (existing.maxOfOrNull { it.orderIndex } ?: 0) + 1
+
         val entry = RoutineExerciseEntity(
             routineDayId = dayId,
             exerciseId = exerciseId,
-            defaultSets = 1
+            defaultSets = 1,
+            orderIndex = nextOrder
         )
         val id = dao.insertRoutineExercise(entry).toInt()
         val inserted = dao.getRoutineExerciseById(id) ?: throw IllegalStateException("Routine exercise not found")
         return inserted.toDomain(exercise)
     }
+
 
     override suspend fun removeRoutineExercise(entryId: Int) {
         val current = dao.getRoutineExerciseById(entryId) ?: return
@@ -284,6 +293,42 @@ class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository 
     override suspend fun getStats(exerciseId: Int, setIndex: Int): ExerciseSetStats? {
         return dao.getStatsForExerciseSet(exerciseId, setIndex)?.toDomain()
     }
+
+    override suspend fun moveRoutineExerciseUp(entryId: Int) {
+        val current = dao.getRoutineExerciseById(entryId) ?: return
+        val dayId = current.routineDayId
+        val all = dao.getRoutineExercisesForDay(dayId)  // ya viene ordenado por orderIndex
+        val index = all.indexOfFirst { it.id == entryId }
+        if (index <= 0) return
+
+        val previous = all[index - 1]
+
+        val currentOrder = current.orderIndex
+        val previousOrder = previous.orderIndex
+
+        dao.updateRoutineExercise(previous.copy(orderIndex = currentOrder))
+        dao.updateRoutineExercise(current.copy(orderIndex = previousOrder))
+    }
+
+
+    override suspend fun moveRoutineExerciseDown(entryId: Int) {
+        val current = dao.getRoutineExerciseById(entryId) ?: return
+        val dayId = current.routineDayId
+        val all = dao.getRoutineExercisesForDay(dayId)
+        val index = all.indexOfFirst { it.id == entryId }
+        if (index == -1 || index >= all.lastIndex) return
+
+        val next = all[index + 1]
+
+        val currentOrder = current.orderIndex
+        val nextOrder = next.orderIndex
+
+        dao.updateRoutineExercise(next.copy(orderIndex = currentOrder))
+        dao.updateRoutineExercise(current.copy(orderIndex = nextOrder))
+    }
+
+
+
 
     private fun defaultLabelFor(dayIndex: Int): String = when (DayOfWeek.of(dayIndex + 1)) {
         DayOfWeek.MONDAY -> "Lunes"

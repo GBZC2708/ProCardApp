@@ -30,8 +30,11 @@ fun RoutineDayWithExercises.toDomain(): RoutineDay = RoutineDay(
     id = day.id,
     dayOfWeek = day.dayOfWeek,
     label = day.label,
-    exercises = exercises.map { it.toDomain() }
+    exercises = exercises
+        .sortedBy { it.routineExercise.orderIndex }
+        .map { it.toDomain() }
 )
+
 
 fun RoutineExerciseWithExercise.toDomain(): RoutineExercise = RoutineExercise(
     id = routineExercise.id,

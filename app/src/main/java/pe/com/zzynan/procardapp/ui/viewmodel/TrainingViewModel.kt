@@ -547,6 +547,21 @@ class TrainingViewModel(
         }
     }
 
+    fun onMoveRoutineExerciseUp(entryId: Int) {
+        viewModelScope.launch {
+            repository.moveRoutineExerciseUp(entryId)
+            statusMessageFlow.value = "Cambios guardados"
+        }
+    }
+
+    fun onMoveRoutineExerciseDown(entryId: Int) {
+        viewModelScope.launch {
+            repository.moveRoutineExerciseDown(entryId)
+            statusMessageFlow.value = "Cambios guardados"
+        }
+    }
+
+
     private fun dateForDay(dayOfWeek: Int): LocalDate {
         return weekStart.plusDays(dayOfWeek.toLong())
     }

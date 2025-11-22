@@ -56,8 +56,11 @@ interface TrainingDao {
     @Query("SELECT * FROM routine_exercises WHERE id = :id")
     suspend fun getRoutineExerciseById(id: Int): RoutineExerciseEntity?
 
-    @Query("SELECT * FROM routine_exercises WHERE routineDayId = :dayId ORDER BY id ASC")
+    @Query("SELECT * FROM routine_exercises WHERE routineDayId = :dayId ORDER BY orderIndex ASC, id ASC")
     suspend fun getRoutineExercisesForDay(dayId: Int): List<RoutineExerciseEntity>
+
+    @Update
+    suspend fun updateRoutineExercise(entity: RoutineExerciseEntity)
 
     @Transaction
     @Query("SELECT * FROM routine_days WHERE id = :id LIMIT 1")

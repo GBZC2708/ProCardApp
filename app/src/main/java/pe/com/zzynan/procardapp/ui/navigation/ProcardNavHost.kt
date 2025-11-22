@@ -123,7 +123,9 @@ fun ProcardNavHost(
                 onConfirmFinish = viewModel::onConfirmFinishSession,
                 onDeleteExercise = viewModel::onDeleteExercise,
                 onToggleTimerPause = viewModel::onToggleTimerPause,
-                onResetTimer = viewModel::onResetTimer
+                onResetTimer = viewModel::onResetTimer,
+                onMoveRoutineExerciseUp = viewModel::onMoveRoutineExerciseUp,     // 👈 nuevo
+                onMoveRoutineExerciseDown = viewModel::onMoveRoutineExerciseDown
             )
 
         }

@@ -12,5 +12,7 @@ data class RoutineExerciseEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val routineDayId: Int,
     val exerciseId: Int,
-    val defaultSets: Int = 1
+    val defaultSets: Int = 1,
+    val orderIndex: Int = 0        // 👈 nuevo campo de orden
 )
+

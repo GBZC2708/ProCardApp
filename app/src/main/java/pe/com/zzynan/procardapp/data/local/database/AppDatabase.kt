@@ -19,6 +19,9 @@ import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutExerciseEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSessionEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 
 /**
  * Base de datos de Room configurada como singleton para evitar múltiples instancias en memoria.
@@ -37,7 +40,7 @@ import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
         WorkoutSetEntryEntity::class,
         ExerciseSetStatsEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverters::class)
@@ -87,7 +90,26 @@ abstract class AppDatabase : RoomDatabase() {
                 "daily_metrics_db"
             )
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                .addMigrations(MIGRATION_4_5)   // 👈 importante
                 .build()
         }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // 1) Agregar la columna orderIndex con default 0 (no rompe nada existente)
+                database.execSQL(
+                    "ALTER TABLE routine_exercises ADD COLUMN orderIndex INTEGER NOT NULL DEFAULT 0"
+                )
+
+                // 2) Inicializar orderIndex usando el id actual para mantener el orden que ya ves hoy
+                database.execSQL(
+                    "UPDATE routine_exercises SET orderIndex = id"
+                )
+            }
+        }
+
     }
 }
+
+
+
