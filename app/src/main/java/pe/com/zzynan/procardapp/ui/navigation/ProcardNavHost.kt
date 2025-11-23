@@ -15,11 +15,12 @@ import pe.com.zzynan.procardapp.ui.screens.FoodScreen
 import pe.com.zzynan.procardapp.ui.screens.CalculadoraScreen
 import pe.com.zzynan.procardapp.ui.screens.GraficosScreen
 import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
-import pe.com.zzynan.procardapp.ui.screens.SuplementacionScreen
+import pe.com.zzynan.procardapp.ui.screens.supplement.SupplementScreen
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyMetricsViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.DailyRegisterViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.FoodViewModel
 import pe.com.zzynan.procardapp.ui.viewmodel.TrainingViewModel
+import pe.com.zzynan.procardapp.ui.viewmodel.SupplementViewModel
 import pe.com.zzynan.procardapp.ui.screens.EntrenamientoScreen
 import androidx.compose.runtime.LaunchedEffect
 import java.time.LocalDate
@@ -130,8 +131,30 @@ fun ProcardNavHost(
 
         }
         composable(ProcardScreen.Suplementacion.route) {
-            // Contenido placeholder para la pantalla de suplementación.
-            SuplementacionScreen()
+            val context = LocalContext.current
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(ProcardScreen.Registro.route)
+            }
+            val registerViewModel: DailyRegisterViewModel = viewModel(
+                parentEntry,
+                factory = DailyRegisterViewModel.provideFactory(context)
+            )
+            val supplementViewModel: SupplementViewModel = viewModel(
+                parentEntry,
+                factory = SupplementViewModel.provideFactory(context)
+            )
+
+            val uiState = registerViewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(uiState.value.userName, uiState.value.dateEpoch) {
+                supplementViewModel.setActiveUser(uiState.value.userName)
+                supplementViewModel.setSelectedDate(LocalDate.ofEpochDay(uiState.value.dateEpoch))
+            }
+
+            SupplementScreen(
+                viewModel = supplementViewModel,
+                onBack = { navController.navigateUp() }
+            )
         }
         composable(ProcardScreen.Calculadora.route) {
             // Contenido placeholder para la pantalla de calculadora.

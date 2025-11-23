@@ -6,7 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import pe.com.zzynan.procardapp.data.local.dao.DailyMetricsDao
+import pe.com.zzynan.procardapp.data.local.dao.DailySupplementDao
 import pe.com.zzynan.procardapp.data.local.dao.FoodDao
+import pe.com.zzynan.procardapp.data.local.dao.SupplementDao
 import pe.com.zzynan.procardapp.data.local.dao.TrainingDao
 import pe.com.zzynan.procardapp.data.local.dao.UserProfileDao
 import pe.com.zzynan.procardapp.data.local.entity.DailyFoodEntryEntity
@@ -21,6 +23,8 @@ import pe.com.zzynan.procardapp.data.local.entity.WorkoutSessionEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import pe.com.zzynan.procardapp.data.local.entity.DailySupplementEntryEntity
+import pe.com.zzynan.procardapp.data.local.entity.SupplementItemEntity
 
 
 /**
@@ -38,9 +42,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         RoutineExerciseEntity::class,
         WorkoutSessionEntity::class,
         WorkoutSetEntryEntity::class,
-        ExerciseSetStatsEntity::class
+        ExerciseSetStatsEntity::class,
+        SupplementItemEntity::class,
+        DailySupplementEntryEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverters::class)
@@ -65,6 +71,16 @@ abstract class AppDatabase : RoomDatabase() {
      * Expone el DAO del módulo de entrenamiento.
      */
     abstract fun trainingDao(): TrainingDao
+
+    /**
+     * Expone el DAO del catálogo de suplementos.
+     */
+    abstract fun supplementDao(): SupplementDao
+
+    /**
+     * Expone el DAO del plan diario de suplementos.
+     */
+    abstract fun dailySupplementDao(): DailySupplementDao
 
     companion object {
         @Volatile
