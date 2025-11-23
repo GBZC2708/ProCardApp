@@ -19,18 +19,28 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import pe.com.zzynan.procardapp.core.di.ServiceLocator
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.core.steps.StepCounterManager
 import pe.com.zzynan.procardapp.core.steps.StepCounterState
 import pe.com.zzynan.procardapp.domain.model.DailyMetrics
 import pe.com.zzynan.procardapp.domain.model.UserProfile
+import pe.com.zzynan.procardapp.domain.model.TrainingStage
 import pe.com.zzynan.procardapp.domain.usecase.GetLastWeightOnOrBeforeUseCase
 import pe.com.zzynan.procardapp.domain.usecase.GetTodayMetricsUseCase
 import pe.com.zzynan.procardapp.domain.usecase.ObserveUserProfileUseCase
+import pe.com.zzynan.procardapp.domain.usecase.ObserveTodayNutritionSummaryUseCase
 import pe.com.zzynan.procardapp.domain.usecase.ObserveWeeklyMetricsUseCase
+import pe.com.zzynan.procardapp.domain.usecase.SaveDailyCardioUseCase
+import pe.com.zzynan.procardapp.domain.usecase.SaveDailySaltUseCase
+import pe.com.zzynan.procardapp.domain.usecase.SaveDailySleepUseCase
+import pe.com.zzynan.procardapp.domain.usecase.SaveDailyStageUseCase
+import pe.com.zzynan.procardapp.domain.usecase.SaveDailyTrainingDoneUseCase
+import pe.com.zzynan.procardapp.domain.usecase.SaveDailyWaterUseCase
 import pe.com.zzynan.procardapp.domain.usecase.SaveDailyWeightUseCase
 import pe.com.zzynan.procardapp.ui.mappers.toUiModel
+import pe.com.zzynan.procardapp.ui.model.DailyNutritionSummaryUiModel
 import pe.com.zzynan.procardapp.ui.model.StepCounterUiModel
 import pe.com.zzynan.procardapp.ui.model.WeightCardUiModel
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
@@ -50,7 +60,15 @@ class DailyRegisterViewModel(
     private val stepCounterManager: StepCounterManager,
     private val saveDailyWeightUseCase: SaveDailyWeightUseCase,
     private val observeWeeklyMetricsUseCase: ObserveWeeklyMetricsUseCase,
-    private val getLastWeightOnOrBeforeUseCase: GetLastWeightOnOrBeforeUseCase
+    private val getLastWeightOnOrBeforeUseCase: GetLastWeightOnOrBeforeUseCase,
+    private val observeTodayNutritionSummaryUseCase: ObserveTodayNutritionSummaryUseCase,
+    private val saveDailyCardioUseCase: SaveDailyCardioUseCase,
+    private val saveDailySleepUseCase: SaveDailySleepUseCase,
+    private val saveDailyWaterUseCase: SaveDailyWaterUseCase,
+    private val saveDailySaltUseCase: SaveDailySaltUseCase,
+    private val saveDailyTrainingDoneUseCase: SaveDailyTrainingDoneUseCase,
+    private val saveDailyStageUseCase: SaveDailyStageUseCase,
+    private val appContext: Context
 ) : ViewModel() {
 
     private val todayFlow = MutableStateFlow(LocalDate.now())
@@ -58,6 +76,12 @@ class DailyRegisterViewModel(
     private val isHistoryVisibleFlow = MutableStateFlow(false)
     private val historyWeightTextFlow = MutableStateFlow("")
     private val historyPlaceholderFlow = MutableStateFlow<String?>(null)
+
+    private val prefs = appContext.getSharedPreferences("daily_register_prefs", Context.MODE_PRIVATE)
+
+    private val waterTargetTrainingFlow = MutableStateFlow(loadWaterTargetTraining())
+    private val waterTargetRestFlow = MutableStateFlow(loadWaterTargetRest())
+    private val supplementationDoneFlow = MutableStateFlow(false)
 
     private val profileFlow = observeUserProfileUseCase()
         .stateIn(
@@ -79,6 +103,13 @@ class DailyRegisterViewModel(
             observeWeeklyMetricsUseCase(username, endDate, days = 30)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val nutritionSummaryFlow: StateFlow<DailyNutritionSummaryUiModel?> = profileFlow
+        .combine(todayFlow) { profile, date -> profile.displayName to date }
+        .flatMapLatest { (username, date) ->
+            observeTodayNutritionSummaryUseCase(username, date).map { it?.toUiModel() }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val stepStateFlow = stepCounterManager.observeState()
 
@@ -175,7 +206,11 @@ class DailyRegisterViewModel(
             stepStateFlow,
             weightCardFlow,
             weightEditorFlow,
-            weeklyUiFlow
+            weeklyUiFlow,
+            nutritionSummaryFlow,
+            waterTargetTrainingFlow,
+            waterTargetRestFlow,
+            supplementationDoneFlow
         ) { values ->
             val profile = values[0] as UserProfile
             val metrics = values[1] as pe.com.zzynan.procardapp.domain.model.DailyMetrics?
@@ -183,6 +218,10 @@ class DailyRegisterViewModel(
             val weightCard = values[3] as WeightCardUiModel
             val weightEditor = values[4] as WeightEditorUiModel
             val weeklyUi = values[5] as WeeklyMetricsUiModel
+            val nutritionSummary = values[6] as DailyNutritionSummaryUiModel?
+            val waterTraining = values[7] as Int
+            val waterRest = values[8] as Int
+            val supplementationDone = values[9] as Boolean
 
             DailyRegisterUiState(
                 userName = profile.displayName,
@@ -192,6 +231,10 @@ class DailyRegisterViewModel(
                     isRunning = stepState.isRunning
                 ),
                 metrics = metrics?.toUiModel(),
+                nutritionSummary = nutritionSummary,
+                waterTargetTrainingLiters = waterTraining,
+                waterTargetRestLiters = waterRest,
+                supplementationDone = supplementationDone,
                 weightCard = weightCard,
                 weightEditor = weightEditor,
                 weeklyMetrics = weeklyUi,
@@ -218,6 +261,12 @@ class DailyRegisterViewModel(
             historyDateFlow.collect { date ->
                 syncHistoryForDate(date)
             }
+        }
+        viewModelScope.launch {
+            combine(profileFlow, todayFlow) { profile, date -> profile.displayName to date }
+                .collect { (username, date) ->
+                    supplementationDoneFlow.value = loadSupplementation(username, date)
+                }
         }
     }
 
@@ -267,6 +316,105 @@ class DailyRegisterViewModel(
             saveHistoryForCurrentDate()
             isHistoryVisibleFlow.value = false
         }
+    }
+
+    fun onStageSelected(stage: TrainingStage) {
+        viewModelScope.launch {
+            saveDailyStageUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                stage
+            )
+        }
+    }
+
+    fun onSleepHoursConfirmed(hours: Float) {
+        val minutes = (hours * 60f).roundToInt().coerceAtLeast(0)
+        viewModelScope.launch {
+            saveDailySleepUseCase(profileFlow.value.displayName, todayFlow.value.toEpochDayLong(), minutes)
+        }
+    }
+
+    fun onCardioMinutesConfirmed(minutes: Int) {
+        val safeMinutes = minutes.coerceAtLeast(0)
+        viewModelScope.launch {
+            saveDailyCardioUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                safeMinutes
+            )
+        }
+    }
+
+    fun onWaterIncrement() {
+        viewModelScope.launch {
+            val current = metricsFlow.value?.waterMl ?: 0
+            saveDailyWaterUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                current + 1_000
+            )
+        }
+    }
+
+    fun onWaterDecrement() {
+        viewModelScope.launch {
+            val current = metricsFlow.value?.waterMl ?: 0
+            saveDailyWaterUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                (current - 1_000).coerceAtLeast(0)
+            )
+        }
+    }
+
+    fun onWaterTargetsChanged(trainingLiters: Int, restLiters: Int) {
+        waterTargetTrainingFlow.value = trainingLiters
+        waterTargetRestFlow.value = restLiters
+        prefs.edit()
+            .putInt(KEY_WATER_TARGET_TRAINING, trainingLiters)
+            .putInt(KEY_WATER_TARGET_REST, restLiters)
+            .apply()
+    }
+
+    fun onSaltIncrement() {
+        viewModelScope.launch {
+            val current = metricsFlow.value?.saltGramsX10 ?: 0
+            saveDailySaltUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                current + 5
+            )
+        }
+    }
+
+    fun onSaltDecrement() {
+        viewModelScope.launch {
+            val current = metricsFlow.value?.saltGramsX10 ?: 0
+            saveDailySaltUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                (current - 5).coerceAtLeast(0)
+            )
+        }
+    }
+
+    fun onTrainingDoneChanged(done: Boolean) {
+        viewModelScope.launch {
+            saveDailyTrainingDoneUseCase(
+                profileFlow.value.displayName,
+                todayFlow.value.toEpochDayLong(),
+                done
+            )
+        }
+    }
+
+    fun onSupplementationToggled() {
+        val username = profileFlow.value.displayName
+        val dateEpoch = todayFlow.value.toEpochDayLong()
+        val newValue = !supplementationDoneFlow.value
+        supplementationDoneFlow.value = newValue
+        persistSupplementation(username, dateEpoch, newValue)
     }
 
     private suspend fun syncHistoryForDate(date: LocalDate) {
@@ -339,7 +487,36 @@ class DailyRegisterViewModel(
 
     private val weightInputRegex = Regex("^\\d*(?:\\.\\d{0,2})?$")
 
+    private fun loadWaterTargetTraining(): Int {
+        val stored = prefs.getInt(KEY_WATER_TARGET_TRAINING, DEFAULT_WATER_TRAINING_LITERS)
+        return if (stored > 0) stored else DEFAULT_WATER_TRAINING_LITERS
+    }
+
+    private fun loadWaterTargetRest(): Int {
+        val stored = prefs.getInt(KEY_WATER_TARGET_REST, DEFAULT_WATER_REST_LITERS)
+        return if (stored > 0) stored else DEFAULT_WATER_REST_LITERS
+    }
+
+    private fun loadSupplementation(username: String, date: LocalDate): Boolean {
+        if (username.isBlank()) return false
+        val key = supplementationKey(username, date.toEpochDayLong())
+        return prefs.getBoolean(key, false)
+    }
+
+    private fun persistSupplementation(username: String, dateEpoch: Long, value: Boolean) {
+        if (username.isBlank()) return
+        prefs.edit().putBoolean(supplementationKey(username, dateEpoch), value).apply()
+    }
+
+    private fun supplementationKey(username: String, dateEpoch: Long): String =
+        "supplementation_done_${'$'}username_${'$'}dateEpoch"
+
     companion object {
+        private const val DEFAULT_WATER_TRAINING_LITERS = 5
+        private const val DEFAULT_WATER_REST_LITERS = 4
+        private const val KEY_WATER_TARGET_TRAINING = "water_target_training_liters"
+        private const val KEY_WATER_TARGET_REST = "water_target_rest_liters"
+
         fun provideFactory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 val appContext = context.applicationContext
@@ -350,6 +527,14 @@ class DailyRegisterViewModel(
                 val saveWeightUseCase = SaveDailyWeightUseCase(dailyMetricsRepository)
                 val weeklyUseCase = ObserveWeeklyMetricsUseCase(dailyMetricsRepository)
                 val lastWeightUseCase = GetLastWeightOnOrBeforeUseCase(dailyMetricsRepository)
+                val foodRepository = ServiceLocator.provideFoodRepository(appContext)
+                val observeNutritionUseCase = ObserveTodayNutritionSummaryUseCase(foodRepository)
+                val saveCardioUseCase = SaveDailyCardioUseCase(dailyMetricsRepository)
+                val saveSleepUseCase = SaveDailySleepUseCase(dailyMetricsRepository)
+                val saveWaterUseCase = SaveDailyWaterUseCase(dailyMetricsRepository)
+                val saveSaltUseCase = SaveDailySaltUseCase(dailyMetricsRepository)
+                val saveTrainingDoneUseCase = SaveDailyTrainingDoneUseCase(dailyMetricsRepository)
+                val saveStageUseCase = SaveDailyStageUseCase(dailyMetricsRepository)
                 val manager = StepCounterManager(appContext)
                 @Suppress("UNCHECKED_CAST")
                 return DailyRegisterViewModel(
@@ -358,7 +543,15 @@ class DailyRegisterViewModel(
                     manager,
                     saveWeightUseCase,
                     weeklyUseCase,
-                    lastWeightUseCase
+                    lastWeightUseCase,
+                    observeNutritionUseCase,
+                    saveCardioUseCase,
+                    saveSleepUseCase,
+                    saveWaterUseCase,
+                    saveSaltUseCase,
+                    saveTrainingDoneUseCase,
+                    saveStageUseCase,
+                    appContext
                 ) as T
             }
         }

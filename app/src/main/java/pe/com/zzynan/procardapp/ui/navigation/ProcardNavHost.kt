@@ -53,7 +53,17 @@ fun ProcardNavHost(
                 onPreviousHistory = viewModel::onHistoryPreviousDay,
                 onNextHistory = viewModel::onHistoryNextDay,
                 onHistoryWeightChange = viewModel::onHistoryWeightChanged,
-                onConfirmHistory = viewModel::onConfirmHistory
+                onConfirmHistory = viewModel::onConfirmHistory,
+                onStageSelected = viewModel::onStageSelected,
+                onSleepHoursConfirmed = viewModel::onSleepHoursConfirmed,
+                onCardioMinutesConfirmed = viewModel::onCardioMinutesConfirmed,
+                onWaterIncrement = viewModel::onWaterIncrement,
+                onWaterDecrement = viewModel::onWaterDecrement,
+                onWaterTargetsChanged = viewModel::onWaterTargetsChanged,
+                onSaltIncrement = viewModel::onSaltIncrement,
+                onSaltDecrement = viewModel::onSaltDecrement,
+                onTrainingDoneChanged = viewModel::onTrainingDoneChanged,
+                onSupplementationToggled = viewModel::onSupplementationToggled
             )
         }
         composable(ProcardScreen.Alimentacion.route) {
