@@ -41,4 +41,19 @@
     <string name="food_edit_consumed_amount">Cantidad consumida</string>
     <string name="food_dialog_confirm">Aceptar</string>
     <string name="weekly_calories_chart_title">Calorías últimos 7 días</string>
+    <string name="supplement_screen_title">Suplementación</string>
+    <string name="supplement_tab_catalog">Catálogo</string>
+    <string name="supplement_tab_daily_plan">Plan diario</string>
+    <string name="supplement_edit_title">Suplemento</string>
+    <string name="supplement_field_name">Nombre</string>
+    <string name="supplement_field_base_amount">Cantidad base</string>
+    <string name="supplement_field_base_unit">Unidad base</string>
+    <string name="supplement_edit_amount">Editar cantidad</string>
+    <string name="supplement_inherited_plan">Usando último plan guardado</string>
+    <string name="supplement_add_entry_title">Agregar toma</string>
+    <string name="supplement_field_select_supplement">Suplemento</string>
+    <string name="supplement_field_time_slot">Momento del día</string>
+    <string name="supplement_field_amount">Cantidad</string>
+    <string name="dialog_save">Guardar</string>
+    <string name="dialog_cancel">Cancelar</string>
 </resources>
