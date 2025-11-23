@@ -9,12 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -22,7 +23,8 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,8 +35,6 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,9 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
@@ -54,19 +54,24 @@ import java.time.format.DateTimeFormatter
 import pe.com.zzynan.procardapp.R
 import pe.com.zzynan.procardapp.domain.model.SupplementTimeSlot
 import pe.com.zzynan.procardapp.domain.model.label
-import pe.com.zzynan.procardapp.ui.model.DailySupplementGroupUi
 import pe.com.zzynan.procardapp.ui.model.DailySupplementItemUi
 import pe.com.zzynan.procardapp.ui.model.SupplementTab
 import pe.com.zzynan.procardapp.ui.model.SupplementUiItem
 import pe.com.zzynan.procardapp.ui.model.SupplementUiState
 import pe.com.zzynan.procardapp.ui.viewmodel.SupplementViewModel
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import java.util.Locale
+import kotlin.math.round
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupplementScreen(
     viewModel: SupplementViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit // se mantiene por compatibilidad, pero no se usa
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -76,20 +81,7 @@ fun SupplementScreen(
     var amountEditEntryId by remember { mutableStateOf<Long?>(null) }
     var amountEditValue by remember { mutableStateOf("") }
 
-    val topAppBarState = rememberTopAppBarState()
-
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(id = R.string.supplement_screen_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
-                scrollBehavior = androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
-            )
-        },
         floatingActionButton = {
             when (uiState.selectedTab) {
                 SupplementTab.CATALOG -> FloatingActionButton(onClick = { isAddCatalogDialogVisible = true }) {
@@ -122,7 +114,7 @@ fun SupplementScreen(
                     onDeleteEntry = viewModel::onDeleteDailyEntry,
                     onAmountClick = { item ->
                         amountEditEntryId = item.id
-                        amountEditValue = item.amount?.toString() ?: ""
+                        amountEditValue = item.amount?.let { formatSupplementAmount(it) } ?: ""
                     }
                 )
             }
@@ -191,7 +183,6 @@ fun SupplementScreen(
             }
         )
     }
-
 }
 
 @Composable
@@ -277,7 +268,10 @@ private fun SupplementDailyPlanTab(
     ) {
         DateSelector(date = uiState.selectedDate, onPrevious = onPreviousDay, onNext = onNextDay)
         if (uiState.isUsingInheritedPlan) {
-            AssistChip(onClick = {}, label = { Text(text = stringResource(id = R.string.supplement_inherited_plan)) })
+            AssistChip(
+                onClick = {},
+                label = { Text(text = stringResource(id = R.string.supplement_inherited_plan)) }
+            )
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -345,9 +339,26 @@ private fun SupplementEditDialog(
     onDismiss: () -> Unit,
     onSave: (String, Double?, String?) -> Unit
 ) {
+    val unitOptions = listOf(
+        "mg",
+        "mcg",
+        "g",
+        "IU",
+        "ml",
+        "cápsula",
+        "tableta",
+        "scoop",
+        "gota"
+    )
+
     var name by remember { mutableStateOf(initial?.name.orEmpty()) }
     var amount by remember { mutableStateOf(initial?.baseAmount.orEmpty()) }
-    var unit by remember { mutableStateOf(initial?.baseUnit.orEmpty()) }
+    var unit by remember {
+        mutableStateOf(
+            initial?.baseUnit?.takeIf { it in unitOptions }.orEmpty()
+        )
+    }
+    var unitExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -365,11 +376,47 @@ private fun SupplementEditDialog(
                     label = { Text(text = stringResource(id = R.string.supplement_field_base_amount)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
-                TextField(
-                    value = unit,
-                    onValueChange = { unit = it },
-                    label = { Text(text = stringResource(id = R.string.supplement_field_base_unit)) }
-                )
+
+                // Dropdown manual para unidad base
+                Column {
+                    Text(
+                        text = stringResource(id = R.string.supplement_field_base_unit),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { unitExpanded = true }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (unit.isBlank()) stringResource(id = R.string.supplement_field_base_unit)
+                            else unit,
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(horizontal = 4.dp),
+                            color = if (unit.isBlank())
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = unitExpanded,
+                        onDismissRequest = { unitExpanded = false }
+                    ) {
+                        unitOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(text = option) },
+                                onClick = {
+                                    unit = option
+                                    unitExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -387,6 +434,7 @@ private fun SupplementEditDialog(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DailyEntryDialog(
     supplements: List<SupplementUiItem>,
@@ -395,29 +443,67 @@ private fun DailyEntryDialog(
 ) {
     var selectedSupplementId by remember { mutableStateOf(supplements.firstOrNull()?.id ?: 0L) }
     var selectedSlot by remember { mutableStateOf(SupplementTimeSlot.FASTED) }
-    var amount by remember { mutableStateOf("") }
 
-    LaunchedEffect(selectedSupplementId) {
-        val supplement = supplements.firstOrNull { it.id == selectedSupplementId }
-        amount = supplement?.baseAmount ?: amount
-    }
+    val selectedChipColors = AssistChipDefaults.assistChipColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+        labelColor = MaterialTheme.colorScheme.onPrimary
+    )
+    val unselectedChipColors = AssistChipDefaults.assistChipColors()
+
+    var supplementMenuExpanded by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = stringResource(id = R.string.supplement_add_entry_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(scrollState)
+            ) {
+                // selector de suplemento
                 Text(text = stringResource(id = R.string.supplement_field_select_supplement))
-                supplements.forEach { item ->
-                    AssistChip(
-                        onClick = { selectedSupplementId = item.id },
-                        label = { Text(text = item.name) },
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = true,
-                        colors = if (selectedSupplementId == item.id) AssistChipDefaults.assistChipColors()
-                        else AssistChipDefaults.assistChipColors()
-                    )
+                val selectedSupplement =
+                    supplements.firstOrNull { it.id == selectedSupplementId }
+
+                Box {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { supplementMenuExpanded = true },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = selectedSupplement?.name
+                                ?: stringResource(id = R.string.supplement_field_select_supplement),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = supplementMenuExpanded,
+                        onDismissRequest = { supplementMenuExpanded = false }
+                    ) {
+                        supplements.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(text = item.name) },
+                                onClick = {
+                                    selectedSupplementId = item.id
+                                    supplementMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
                 }
+
+                // momento del día
                 Text(text = stringResource(id = R.string.supplement_field_time_slot))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val sections = listOf(
@@ -446,41 +532,47 @@ private fun DailyEntryDialog(
                             SupplementTimeSlot.BEFORE_SLEEP
                         )
                     )
+
                     sections.forEach { (title, items) ->
                         Text(text = title, style = MaterialTheme.typography.labelMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             items.forEach { slot ->
                                 AssistChip(
-                                    onClick = { selectedSlot = slot },
+                                    onClick = {
+                                        selectedSlot = slot
+                                        if (selectedSupplementId != 0L) {
+                                            val baseAmount = supplements
+                                                .firstOrNull { it.id == selectedSupplementId }
+                                                ?.baseAmount
+                                                ?.toDoubleOrNull()
+
+                                            onSave(selectedSupplementId, slot, baseAmount)
+                                        }
+                                        onDismiss()
+                                    },
                                     label = { Text(text = slot.label()) },
                                     shape = RoundedCornerShape(8.dp),
-                                    colors = if (selectedSlot == slot) AssistChipDefaults.assistChipColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                                    ) else AssistChipDefaults.assistChipColors()
+                                    colors = if (selectedSlot == slot)
+                                        selectedChipColors
+                                    else
+                                        unselectedChipColors
                                 )
                             }
                         }
                     }
                 }
-                TextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text(text = stringResource(id = R.string.supplement_field_amount)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-                val unitLabel = supplements.firstOrNull { it.id == selectedSupplementId }?.baseUnit
+
+                val unitLabel =
+                    supplements.firstOrNull { it.id == selectedSupplementId }?.baseUnit
                 unitLabel?.let {
                     Text(text = it, style = MaterialTheme.typography.bodySmall)
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                onSave(selectedSupplementId, selectedSlot, amount.toDoubleOrNull())
-            }) {
-                Text(text = stringResource(id = R.string.dialog_save))
-            }
-        },
+        confirmButton = {}, // sin Guardar
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = stringResource(id = R.string.dialog_cancel))
@@ -488,3 +580,23 @@ private fun DailyEntryDialog(
         }
     )
 }
+
+private fun formatSupplementAmount(value: Double): String {
+    // redondear a 3 decimales
+    val rounded = round(value * 1000.0) / 1000.0
+    return if (rounded % 1.0 == 0.0) {
+        rounded.toInt().toString()
+    } else {
+        var s = String.format(Locale.US, "%.3f", rounded)
+        // quitar ceros y punto sobrantes
+        while (s.contains('.') && s.endsWith("0")) {
+            s = s.dropLast(1)
+        }
+        if (s.endsWith(".")) {
+            s = s.dropLast(1)
+        }
+        s
+    }
+}
+
+

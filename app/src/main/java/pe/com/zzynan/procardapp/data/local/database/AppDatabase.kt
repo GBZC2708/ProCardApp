@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import pe.com.zzynan.procardapp.data.local.dao.DailyMetricsDao
 import pe.com.zzynan.procardapp.data.local.dao.DailySupplementDao
 import pe.com.zzynan.procardapp.data.local.dao.FoodDao
@@ -13,19 +15,16 @@ import pe.com.zzynan.procardapp.data.local.dao.TrainingDao
 import pe.com.zzynan.procardapp.data.local.dao.UserProfileDao
 import pe.com.zzynan.procardapp.data.local.entity.DailyFoodEntryEntity
 import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
+import pe.com.zzynan.procardapp.data.local.entity.DailySupplementEntryEntity
 import pe.com.zzynan.procardapp.data.local.entity.ExerciseSetStatsEntity
 import pe.com.zzynan.procardapp.data.local.entity.FoodItemEntity
 import pe.com.zzynan.procardapp.data.local.entity.RoutineDayEntity
 import pe.com.zzynan.procardapp.data.local.entity.RoutineExerciseEntity
+import pe.com.zzynan.procardapp.data.local.entity.SupplementItemEntity
 import pe.com.zzynan.procardapp.data.local.entity.UserProfileEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutExerciseEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSessionEntity
 import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
-import pe.com.zzynan.procardapp.data.local.entity.DailySupplementEntryEntity
-import pe.com.zzynan.procardapp.data.local.entity.SupplementItemEntity
-
 
 /**
  * Base de datos de Room configurada como singleton para evitar múltiples instancias en memoria.
@@ -97,7 +96,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         /**
          * Construye la base de datos con políticas de migración seguras y WAL habilitado.
-         * Se utiliza fallbackToDestructiveMigration como estrategia inicial para iteración rápida.
          */
         private fun buildDatabase(context: Context): AppDatabase {
             return Room.databaseBuilder(
@@ -106,10 +104,16 @@ abstract class AppDatabase : RoomDatabase() {
                 "daily_metrics_db"
             )
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_4_5)   // 👈 importante
+                .addMigrations(
+                    MIGRATION_4_5,
+                    MIGRATION_5_6
+                )
                 .build()
         }
 
+        /**
+         * Migración 4 -> 5: agrega orderIndex a routine_exercises.
+         */
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // 1) Agregar la columna orderIndex con default 0 (no rompe nada existente)
@@ -124,8 +128,59 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migración 5 -> 6: crea las tablas de suplementación sin tocar datos existentes.
+         */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Tabla de catálogo de suplementos
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `supplement_items` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `userName` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `baseAmount` REAL,
+                        `baseUnit` TEXT,
+                        `isActive` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+
+                // Índice para userName en catálogo
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_supplement_items_userName` ON `supplement_items` (`userName`)"
+                )
+
+                // Tabla de plan diario de suplementos
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `daily_supplement_entries` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `userName` TEXT NOT NULL,
+                        `dateEpochDay` INTEGER NOT NULL,
+                        `supplementId` INTEGER NOT NULL,
+                        `timeSlot` TEXT NOT NULL,
+                        `amount` REAL,
+                        `unit` TEXT,
+                        `orderInSlot` INTEGER NOT NULL,
+                        FOREIGN KEY(`supplementId`) REFERENCES `supplement_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+
+                // Índices para plan diario
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_daily_supplement_entries_userName` ON `daily_supplement_entries` (`userName`)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_daily_supplement_entries_dateEpochDay` ON `daily_supplement_entries` (`dateEpochDay`)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_daily_supplement_entries_supplementId` ON `daily_supplement_entries` (`supplementId`)"
+                )
+            }
+        }
     }
 }
-
-
-
