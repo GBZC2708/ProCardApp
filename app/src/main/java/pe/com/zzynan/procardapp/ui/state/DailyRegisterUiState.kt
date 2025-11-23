@@ -4,6 +4,7 @@ import java.time.LocalDate
 import pe.com.zzynan.procardapp.core.extensions.toEpochDayLong
 import pe.com.zzynan.procardapp.domain.model.UserProfile
 import pe.com.zzynan.procardapp.ui.model.DailyMetricsUiModel
+import pe.com.zzynan.procardapp.ui.model.DailyNutritionSummaryUiModel
 import pe.com.zzynan.procardapp.ui.model.StepCounterUiModel
 import pe.com.zzynan.procardapp.ui.model.WeightCardUiModel
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
@@ -18,6 +19,10 @@ data class DailyRegisterUiState(
     val dateEpoch: Long = LocalDate.now().toEpochDayLong(),
     val stepCounter: StepCounterUiModel = StepCounterUiModel(),
     val metrics: DailyMetricsUiModel? = null,
+    val nutritionSummary: DailyNutritionSummaryUiModel? = null,
+    val waterTargetTrainingLiters: Int = 5,
+    val waterTargetRestLiters: Int = 4,
+    val supplementationDone: Boolean = false,
     val weightCard: WeightCardUiModel = WeightCardUiModel(),
     val weightEditor: WeightEditorUiModel = WeightEditorUiModel(),
     val weeklyMetrics: WeeklyMetricsUiModel = WeeklyMetricsUiModel(),
