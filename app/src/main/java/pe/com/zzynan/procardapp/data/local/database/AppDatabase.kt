@@ -45,7 +45,7 @@ import pe.com.zzynan.procardapp.data.local.entity.WorkoutSetEntryEntity
         SupplementItemEntity::class,
         DailySupplementEntryEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverters::class)
@@ -106,7 +106,8 @@ abstract class AppDatabase : RoomDatabase() {
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 .addMigrations(
                     MIGRATION_4_5,
-                    MIGRATION_5_6
+                    MIGRATION_5_6,
+                    MIGRATION_6_7
                 )
                 .build()
         }
@@ -180,6 +181,34 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_daily_supplement_entries_supplementId` ON `daily_supplement_entries` (`supplementId`)"
                 )
+            }
+        }
+
+        /**
+         * Migración 6 -> 7: agrega campos corporales al perfil de usuario.
+         */
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                val columns = listOf(
+                    "sex TEXT",
+                    "age INTEGER",
+                    "heightCm REAL",
+                    "usesPharmacology INTEGER NOT NULL DEFAULT 0",
+                    "neckCm REAL",
+                    "waistCm REAL",
+                    "hipCm REAL",
+                    "chestCm REAL",
+                    "wristCm REAL",
+                    "thighCm REAL",
+                    "calfCm REAL",
+                    "relaxedBicepsCm REAL",
+                    "flexedBicepsCm REAL",
+                    "forearmCm REAL",
+                    "footCm REAL"
+                )
+                columns.forEach { column ->
+                    database.execSQL("ALTER TABLE user_profile ADD COLUMN $column")
+                }
             }
         }
     }

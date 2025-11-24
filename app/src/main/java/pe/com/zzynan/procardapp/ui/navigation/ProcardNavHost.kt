@@ -12,7 +12,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import pe.com.zzynan.procardapp.ui.screens.FoodScreen
-import pe.com.zzynan.procardapp.ui.screens.CalculadoraScreen
+import pe.com.zzynan.procardapp.ui.screens.BodyDashboardScreen
 import pe.com.zzynan.procardapp.ui.screens.GraficosScreen
 import pe.com.zzynan.procardapp.ui.screens.RegistroScreen
 import pe.com.zzynan.procardapp.ui.screens.supplement.SupplementScreen
@@ -167,8 +167,7 @@ fun ProcardNavHost(
             )
         }
         composable(ProcardScreen.Calculadora.route) {
-            // Contenido placeholder para la pantalla de calculadora.
-            CalculadoraScreen()
+            BodyDashboardScreen()
         }
         composable(ProcardScreen.Graficos.route) { backStackEntry ->
             val context = LocalContext.current

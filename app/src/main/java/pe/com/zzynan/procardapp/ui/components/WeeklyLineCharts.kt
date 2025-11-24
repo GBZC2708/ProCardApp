@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
 import java.time.LocalDate
 import pe.com.zzynan.procardapp.R
+import pe.com.zzynan.procardapp.ui.model.TimeSeriesPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyCaloriesPointUiModel
 import pe.com.zzynan.procardapp.ui.model.WeeklyStepsPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
@@ -343,3 +344,21 @@ private fun Color.toArgb(): Int = android.graphics.Color.argb(
     (green * 255).toInt(),
     (blue * 255).toInt()
 )
+
+@Composable
+fun MiniBodySparkline(
+    modifier: Modifier = Modifier,
+    data: List<TimeSeriesPoint>,
+    highlightLast: Boolean = true
+) {
+    val dates = if (data.isNotEmpty()) data.map { it.date } else emptyList()
+    val values = if (data.isNotEmpty()) data.map { it.value } else emptyList()
+    CompactLineChart(
+        values = values,
+        dates = dates,
+        onPointSelected = null,
+        valueFormatter = { value -> String.format("%.1f", value) },
+        emptyText = stringResource(id = R.string.chart_empty_state),
+        modifier = modifier
+    )
+}
