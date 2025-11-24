@@ -56,4 +56,8 @@
     <string name="supplement_field_amount">Cantidad</string>
     <string name="dialog_save">Guardar</string>
     <string name="dialog_cancel">Cancelar</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="edit">Editar</string>
+    <string name="ok">OK</string>
 </resources>

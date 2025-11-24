@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -20,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -47,6 +47,7 @@ import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyCaloriesPointUiModel
 import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
+import androidx.compose.foundation.layout.Row
 
 @Composable
 fun RegistroScreen(
@@ -73,7 +74,8 @@ fun RegistroScreen(
     val metrics = uiState.metrics
     val stage = metrics?.stage ?: TrainingStage.DEFINICION
     val sleepMinutes = metrics?.sleepMinutes ?: 0
-    val sleepHoursText = if (sleepMinutes > 0) String.format(Locale.US, "%.2f h", sleepMinutes / 60f) else "0 h"
+    val sleepHoursText =
+        if (sleepMinutes > 0) String.format(Locale.US, "%.2f h", sleepMinutes / 60f) else "0 h"
     val cardioMinutes = metrics?.cardioMinutes ?: 0
     val waterLiters = (metrics?.waterMl ?: 0) / 1000
     val saltGramsX10 = metrics?.saltGramsX10 ?: 0
@@ -91,7 +93,9 @@ fun RegistroScreen(
     val (showWaterTargetsDialog, setShowWaterTargetsDialog) = remember { mutableStateOf(false) }
 
     val (sleepInput, setSleepInput) = remember(sleepMinutes) {
-        mutableStateOf(if (sleepMinutes > 0) String.format(Locale.US, "%.2f", sleepMinutes / 60f) else "")
+        mutableStateOf(
+            if (sleepMinutes > 0) String.format(Locale.US, "%.2f", sleepMinutes / 60f) else ""
+        )
     }
     val (cardioInput, setCardioInput) = remember(cardioMinutes) {
         mutableStateOf(if (cardioMinutes > 0) cardioMinutes.toString() else "")
@@ -107,53 +111,84 @@ fun RegistroScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+
     ) {
         TrainingStageCard(stage = stage, onStageClick = { setShowStageDialog(true) })
+
         StepCounterCard(
             uiModel = uiState.stepCounter,
             onPlayPauseClick = onToggleStepCounter,
             modifier = Modifier.fillMaxWidth()
         )
-        WeightCard(
-            uiModel = uiState.weightCard,
-            onValueClick = { onOpenHistory(LocalDate.now()) },
-            modifier = Modifier.fillMaxWidth()
-        )
-        SleepCard(
-            hoursText = sleepHoursText,
-            hasValue = sleepMinutes > 0,
-            onEditClick = { setShowSleepDialog(true) }
-        )
-        CardioCard(
-            minutes = cardioMinutes,
-            isDone = cardioMinutes > 0,
-            onEditMinutesClick = { setShowCardioDialog(true) },
-            onToggleDone = {
-                if (cardioMinutes > 0) onCardioMinutesConfirmed(0) else onCardioMinutesConfirmed(defaultCardioMinutes)
-            }
-        )
-        WaterCard(
-            currentLiters = waterLiters,
-            targetTrainingLiters = uiState.waterTargetTrainingLiters,
-            targetRestLiters = uiState.waterTargetRestLiters,
-            onIncrement = onWaterIncrement,
-            onDecrement = onWaterDecrement,
-            onTargetsClick = { setShowWaterTargetsDialog(true) }
-        )
-        SaltCard(
-            gramsText = saltText,
-            hasValue = saltGramsX10 > 0,
-            onIncrement = onSaltIncrement,
-            onDecrement = onSaltDecrement
-        )
-        TrainingDoneCard(
-            isDone = trainingDone,
-            onToggle = { onTrainingDoneChanged(!trainingDone) }
-        )
+
+        // Peso + Sueño en una fila
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            WeightCard(
+                uiModel = uiState.weightCard,
+                onValueClick = { onOpenHistory(LocalDate.now()) },
+                modifier = Modifier.weight(1f)
+            )
+            SleepCard(
+                hoursText = sleepHoursText,
+                hasValue = sleepMinutes > 0,
+                onEditClick = { setShowSleepDialog(true) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // Cardio + Entrenamiento en una fila
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            CardioCard(
+                minutes = cardioMinutes,
+                isDone = cardioMinutes > 0,
+                onEditMinutesClick = { setShowCardioDialog(true) },
+                onToggleDone = {
+                    if (cardioMinutes > 0) onCardioMinutesConfirmed(0)
+                    else onCardioMinutesConfirmed(defaultCardioMinutes)
+                },
+                modifier = Modifier.weight(1f)
+            )
+            TrainingDoneCard(
+                isDone = trainingDone,
+                onToggle = { onTrainingDoneChanged(!trainingDone) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // Agua + Sal en una fila
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            WaterCard(
+                currentLiters = waterLiters,
+                targetTrainingLiters = uiState.waterTargetTrainingLiters,
+                targetRestLiters = uiState.waterTargetRestLiters,
+                onIncrement = onWaterIncrement,
+                onDecrement = onWaterDecrement,
+                onTargetsClick = { setShowWaterTargetsDialog(true) },
+                modifier = Modifier.weight(1f)
+            )
+            SaltCard(
+                gramsText = saltText,
+                hasValue = saltGramsX10 > 0,
+                onIncrement = onSaltIncrement,
+                onDecrement = onSaltDecrement,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         NutritionSummaryCard(summary = uiState.nutritionSummary)
         SupplementationCard(isDone = uiState.supplementationDone, onToggle = onSupplementationToggled)
+
         uiState.metrics?.let { metrics ->
             Column(
                 modifier = Modifier
