@@ -128,6 +128,20 @@ interface TrainingDao {
 
     @Update
     suspend fun updateStats(entity: ExerciseSetStatsEntity)
+
+    @Query(
+        """
+        SELECT * FROM workout_sessions
+        WHERE routineDayId = :routineDayId
+          AND date < :date
+        ORDER BY date DESC, startedAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLastSessionBefore(
+        routineDayId: Int,
+        date: String
+    ): WorkoutSessionEntity?
 }
 
 data class RoutineDayWithExercises(

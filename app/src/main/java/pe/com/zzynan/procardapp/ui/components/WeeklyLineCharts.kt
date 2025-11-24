@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -76,6 +77,7 @@ fun WeightLineChart(
                 onPointSelected = { index -> displayPoints.getOrNull(index)?.date?.let(onPointSelected) },
                 valueFormatter = { value -> String.format("%.2f", value) },
                 emptyText = emptyText
+                // usa tamaños por defecto (26f, 9f, 110.dp)
             )
         }
     }
@@ -119,6 +121,7 @@ fun StepsLineChart(
                 onPointSelected = null,
                 valueFormatter = { value -> value.toInt().toString() },
                 emptyText = emptyText
+                // tamaños por defecto
             )
         }
     }
@@ -166,6 +169,7 @@ fun WeeklyCaloriesChart(
                 onPointSelected = null,
                 valueFormatter = { value -> value.toInt().toString() },
                 emptyText = emptyText
+                // tamaños por defecto
             )
         }
     }
@@ -178,16 +182,27 @@ private fun CompactLineChart(
     onPointSelected: ((Int) -> Unit)?,
     valueFormatter: (Float) -> String,
     emptyText: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    chartHeightDp: Dp = chartHeight,
+    axisTextSizePx: Float = 26f,
+    valueTextSizePx: Float = 26f,
+    pointRadiusPx: Float = 9f
 ) {
     val colors = MaterialTheme.colorScheme
     val onSurfaceColor = colors.onSurface
     val primaryColor = colors.primary
     val secondaryColor = colors.secondary
 
-    val textPaint = Paint().apply {
+    val axisPaint = Paint().apply {
         color = onSurfaceColor.toArgb()
-        textSize = 26f
+        textSize = axisTextSizePx
+        isAntiAlias = true
+        textAlign = Paint.Align.CENTER
+    }
+
+    val valuePaint = Paint().apply {
+        color = onSurfaceColor.toArgb()
+        textSize = valueTextSizePx
         isAntiAlias = true
         textAlign = Paint.Align.CENTER
     }
@@ -202,28 +217,30 @@ private fun CompactLineChart(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(chartHeight)
+            .height(chartHeightDp)
             .pointerInput(values, dates, onPointSelected) {
                 if (onPointSelected == null || values.isEmpty()) return@pointerInput
                 detectTapGestures { offset ->
                     val effectiveWidth = size.width - (H_PADDING * 2)
-                    val step = if (values.size > 1) effectiveWidth / (values.size - 1) else effectiveWidth
+                    val step =
+                        if (values.size > 1) effectiveWidth / (values.size - 1) else effectiveWidth
                     val clampedX = (offset.x - H_PADDING).coerceIn(0f, effectiveWidth)
-                    val index = if (step == 0f) 0 else (clampedX / step).toInt().coerceIn(values.indices)
+                    val index =
+                        if (step == 0f) 0 else (clampedX / step).toInt().coerceIn(values.indices)
                     onPointSelected(index)
                 }
             }
     ) {
         if (values.isEmpty()) {
-            drawXAxisLabels(textPaint, safeDates, values.size)
-            drawEmptyMessage(textPaint, emptyText)
+            drawXAxisLabels(axisPaint, safeDates, values.size)
+            drawEmptyMessage(axisPaint, emptyText)
             return@Canvas
         }
 
         val availableValues = values.filterNotNull()
         if (availableValues.isEmpty()) {
-            drawXAxisLabels(textPaint, safeDates, values.size)
-            drawEmptyMessage(textPaint, emptyText)
+            drawXAxisLabels(axisPaint, safeDates, values.size)
+            drawEmptyMessage(axisPaint, emptyText)
             return@Canvas
         }
 
@@ -232,13 +249,15 @@ private fun CompactLineChart(
 
         val minValue = availableValues.minOrNull() ?: 0f
         val maxValue = availableValues.maxOrNull() ?: 0f
-        val baseRange = (maxValue - minValue).takeIf { it > 0f } ?: maxValue.coerceAtLeast(1f) * 0.25f
+        val baseRange = (maxValue - minValue).takeIf { it > 0f }
+            ?: maxValue.coerceAtLeast(1f) * 0.25f
         val yMin = minValue - baseRange * 0.2f
         val yMax = maxValue + baseRange * 0.2f
         val range = (yMax - yMin).coerceAtLeast(0.1f)
 
         val offsets = values.mapIndexed { index, value ->
-            val x = H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
+            val x =
+                H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
             value?.let {
                 val normalized = (it - yMin) / range
                 val y = size.height - V_PADDING - (normalized * chartHeightPx)
@@ -272,25 +291,26 @@ private fun CompactLineChart(
         }
 
         offsets.forEachIndexed { index, pair ->
-            val x = H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
+            val x =
+                H_PADDING + if (values.size > 1) chartWidth / (values.size - 1) * index else chartWidth / 2
             drawContext.canvas.nativeCanvas.drawText(
                 dayAbbreviation(safeDates.getOrNull(index)),
                 x,
                 size.height - (V_PADDING / 2),
-                textPaint
+                axisPaint
             )
 
             pair?.let { (_, point) ->
                 drawCircle(
                     color = secondaryColor,
-                    radius = 9f,
+                    radius = pointRadiusPx,
                     center = point
                 )
                 drawContext.canvas.nativeCanvas.drawText(
                     valueFormatter(values[index] ?: 0f),
                     point.x,
                     point.y - 14f,
-                    textPaint
+                    valuePaint
                 )
             }
         }
@@ -316,7 +336,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawXAxisLabels(
     val count = valueCount.coerceAtLeast(dates.size).coerceAtLeast(1)
     val chartWidth = size.width - (H_PADDING * 2)
     repeat(count) { index ->
-        val x = H_PADDING + if (count > 1) chartWidth / (count - 1) * index else chartWidth / 2
+        val x =
+            H_PADDING + if (count > 1) chartWidth / (count - 1) * index else chartWidth / 2
         drawContext.canvas.nativeCanvas.drawText(
             dayAbbreviation(dates.getOrNull(index)),
             x,
@@ -349,7 +370,7 @@ private fun Color.toArgb(): Int = android.graphics.Color.argb(
 fun MiniBodySparkline(
     modifier: Modifier = Modifier,
     data: List<TimeSeriesPoint>,
-    highlightLast: Boolean = true
+    highlightLast: Boolean = true // por ahora no lo usamos, pero se mantiene
 ) {
     val dates = if (data.isNotEmpty()) data.map { it.date } else emptyList()
     val values = if (data.isNotEmpty()) data.map { it.value } else emptyList()
@@ -359,6 +380,10 @@ fun MiniBodySparkline(
         onPointSelected = null,
         valueFormatter = { value -> String.format("%.1f", value) },
         emptyText = stringResource(id = R.string.chart_empty_state),
-        modifier = modifier
+        modifier = modifier,
+        chartHeightDp = 90.dp,     // un poco más bajo para mini gráfica
+        axisTextSizePx = 18f,      // días más pequeños
+        valueTextSizePx = 18f,     // pesos más pequeños
+        pointRadiusPx = 6f         // puntos más pequeños
     )
 }

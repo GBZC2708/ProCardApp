@@ -196,6 +196,7 @@ class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository 
         date: LocalDate,
         startedAt: Long
     ): WorkoutSession {
+        // 1) Crear la nueva sesión (igual que antes)
         val sessionEntity = WorkoutSessionEntity(
             date = date.toString(),
             routineDayId = routineDay.id,
@@ -206,22 +207,68 @@ class TrainingRepositoryImpl(private val dao: TrainingDao) : TrainingRepository 
             status = WorkoutSessionStatus.IN_PROGRESS.name
         )
         val sessionId = dao.insertSession(sessionEntity).toInt()
+
+        // 2) Buscar la ÚLTIMA sesión anterior para este día de rutina
+        val previousSession = dao.getLastSessionBefore(
+            routineDayId = routineDay.id,
+            date = date.toString()
+        )
+
+        // 3) Cargar todos los sets de esa sesión anterior (si existe)
+        val previousSetsByExercise: Map<Int, List<WorkoutSetEntryEntity>> =
+            if (previousSession != null) {
+                dao.getSetEntriesForSession(previousSession.id)
+                    .groupBy { it.exerciseId }
+            } else {
+                emptyMap()
+            }
+
+        // 4) Para cada ejercicio de la rutina, clonar series previas o usar defaultSets
         routineDay.exercises.forEach { routineExercise ->
-            val setCount = routineExercise.defaultSets.coerceAtLeast(1)
-            repeat(setCount) { index ->
-                dao.insertSetEntry(
-                    WorkoutSetEntryEntity(
-                        sessionId = sessionId,
-                        exerciseId = routineExercise.exercise.id,
-                        setIndex = index + 1,
-                        updatedAt = startedAt
+            val exerciseId = routineExercise.exercise.id
+            val previousSetsForExercise = previousSetsByExercise[exerciseId]
+
+            if (!previousSetsForExercise.isNullOrEmpty()) {
+                // ✔ Hay historial → clonamos cantidad de series + peso/reps
+                previousSetsForExercise
+                    .sortedBy { it.setIndex }
+                    .forEach { prev ->
+                        dao.insertSetEntry(
+                            WorkoutSetEntryEntity(
+                                sessionId = sessionId,
+                                exerciseId = exerciseId,
+                                setIndex = prev.setIndex,
+                                weight = prev.weight,       // Peso de la última vez
+                                reps = prev.reps,           // Reps de la última vez
+                                isCompleted = false,        // ❗ Siempre inicia sin marcar
+                                updatedAt = startedAt
+                            )
+                        )
+                    }
+            } else {
+                // ❌ Sin historial → comportamiento actual (usa defaultSets)
+                val setCount = routineExercise.defaultSets.coerceAtLeast(1)
+                repeat(setCount) { index ->
+                    dao.insertSetEntry(
+                        WorkoutSetEntryEntity(
+                            sessionId = sessionId,
+                            exerciseId = exerciseId,
+                            setIndex = index + 1,
+                            weight = null,
+                            reps = null,
+                            isCompleted = false,
+                            updatedAt = startedAt
+                        )
                     )
-                )
+                }
             }
         }
+
+        // 5) Devolver la sesión como antes
         return dao.getSessionById(sessionId)?.toDomain()
             ?: throw IllegalStateException("Unable to load created session")
     }
+
 
     override fun observeSession(sessionId: Int): Flow<WorkoutSession?> {
         return dao.observeSessionById(sessionId).map { it?.toDomain() }
