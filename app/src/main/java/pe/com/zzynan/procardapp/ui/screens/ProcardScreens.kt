@@ -383,9 +383,9 @@ fun RegistroScreen(
 }
 
 private fun TrainingStage.toReadableLabel(): String = when (this) {
-    TrainingStage.DEFINICION -> "Definición"
-    TrainingStage.MANTENIMIENTO -> "Mantenimiento"
-    TrainingStage.DEFICIT -> "Déficit"
+    TrainingStage.DEFINICION -> "DEFINICIÓN"
+    TrainingStage.MANTENIMIENTO -> "MANTENIMIENTO"
+    TrainingStage.VOLUMEN -> "VOLUMEN"
 }
 
 @Composable

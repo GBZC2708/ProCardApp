@@ -555,7 +555,7 @@ fun SupplementationCard(
 /* ---------- EXTENSIÓN ---------- */
 
 private fun TrainingStage.toReadableText(): String = when (this) {
-    TrainingStage.DEFINICION -> "Definición"
-    TrainingStage.MANTENIMIENTO -> "Mantenimiento"
-    TrainingStage.DEFICIT -> "Déficit"
+    TrainingStage.DEFINICION -> "DEFINICIÓN"
+    TrainingStage.MANTENIMIENTO -> "MANTENIMIENTO"
+    TrainingStage.VOLUMEN -> "VOLUMEN"
 }
