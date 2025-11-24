@@ -26,16 +26,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pe.com.zzynan.procardapp.domain.model.TrainingStage
 import pe.com.zzynan.procardapp.ui.model.DailyNutritionSummaryUiModel
 
-private val PairCardMinHeight = 150.dp
 
-// --- Fase actual ---
+/* ---------- FASE ---------- */
+
 @Composable
 fun TrainingStageCard(
     stage: TrainingStage,
@@ -45,7 +47,7 @@ fun TrainingStageCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
@@ -82,7 +84,8 @@ fun TrainingStageCard(
     }
 }
 
-// --- Sueño ---
+/* ---------- SUEÑO ---------- */
+
 @Composable
 fun SleepCard(
     hoursText: String,
@@ -93,14 +96,15 @@ fun SleepCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 4.dp)
+            .heightIn(93.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -118,7 +122,7 @@ fun SleepCard(
                 )
                 Text(
                     text = hoursText,
-                    fontSize = 32.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.clickable(onClick = onEditClick)
@@ -133,7 +137,9 @@ fun SleepCard(
     }
 }
 
-// --- Cardio ---
+
+/* ---------- CARDIO ---------- */
+
 @Composable
 fun CardioCard(
     minutes: Int,
@@ -145,19 +151,19 @@ fun CardioCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .heightIn(min = PairCardMinHeight),
+            .padding(horizontal = 4.dp)
+            .heightIn(130.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -184,20 +190,24 @@ fun CardioCard(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .clickable(onClick = onEditMinutesClick),
+                    .clickable(enabled = !isDone, onClick = onEditMinutesClick),
                 textAlign = TextAlign.Center
             )
 
             Text(
                 text = if (isDone) "Cardio registrado" else "Cardio no registrado",
                 style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
-// --- Agua ---
+
+/* ---------- AGUA ---------- */
+
 @Composable
 fun WaterCard(
     currentLiters: Int,
@@ -211,19 +221,19 @@ fun WaterCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .heightIn(min = PairCardMinHeight),
+            .padding(horizontal = 4.dp)
+            .heightIn(128.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -237,19 +247,15 @@ fun WaterCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     androidx.compose.material3.IconButton(
                         onClick = onDecrement,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Text(text = "-1", textAlign = TextAlign.Center)
-                    }
+                        modifier = Modifier.size(32.dp)
+                    ) { Text(text = "-1", textAlign = TextAlign.Center) }
                     androidx.compose.material3.IconButton(
                         onClick = onIncrement,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Text(text = "+1", textAlign = TextAlign.Center)
-                    }
+                        modifier = Modifier.size(32.dp)
+                    ) { Text(text = "+1", textAlign = TextAlign.Center) }
                 }
             }
 
@@ -257,12 +263,13 @@ fun WaterCard(
                 text = "$currentLiters L",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "Meta agua: $targetTrainingLiters L entreno / $targetRestLiters L descanso",
+                text = "Meta: $targetTrainingLiters L entreno / $targetRestLiters L descanso",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.clickable(onClick = onTargetsClick)
@@ -280,7 +287,9 @@ fun WaterCard(
     }
 }
 
-// --- Sal ---
+
+/* ---------- SAL ---------- */
+
 @Composable
 fun SaltCard(
     gramsText: String,
@@ -292,23 +301,23 @@ fun SaltCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .heightIn(min = PairCardMinHeight),
+            .padding(horizontal = 4.dp)
+            .heightIn(128.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Restaurant,
+                    imageVector = Icons.Filled.Restaurant, // icono tipo salero
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -318,26 +327,18 @@ fun SaltCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     androidx.compose.material3.IconButton(
                         onClick = onDecrement,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text(
-                            text = "-0.5",
-                            textAlign = TextAlign.Center,
-                            fontSize = 12.sp
-                        )
+                        Text(text = "-0.5", textAlign = TextAlign.Center, fontSize = 12.sp)
                     }
                     androidx.compose.material3.IconButton(
                         onClick = onIncrement,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text(
-                            text = "+0.5",
-                            textAlign = TextAlign.Center,
-                            fontSize = 12.sp
-                        )
+                        Text(text = "+0.5", textAlign = TextAlign.Center, fontSize = 12.sp)
                     }
                 }
             }
@@ -346,20 +347,25 @@ fun SaltCard(
                 text = gramsText,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
                 text = if (hasValue) "Sal registrada hoy" else "Sin registro de sal",
                 style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
-// --- Entrenamiento hecho ---
+
+/* ---------- ENTRENAMIENTO ---------- */
+
 @Composable
 fun TrainingDoneCard(
     isDone: Boolean,
@@ -369,40 +375,66 @@ fun TrainingDoneCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .heightIn(min = PairCardMinHeight),
+            .padding(horizontal = 4.dp)
+            .heightIn(130.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                imageVector = Icons.Filled.FitnessCenter,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.FitnessCenter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
                 Text(
                     text = "Entrenamiento",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
                 )
+
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+
                 Text(
                     text = if (isDone) "Hoy entrenaste" else "Hoy no entrenaste",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Checkbox(
+                    checked = isDone,
+                    onCheckedChange = { onToggle() }
+                )
             }
-            Checkbox(checked = isDone, onCheckedChange = { onToggle() })
+
+            Text(
+                text = "Revisa tu rutina para tu entrenamiento de hoy",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
         }
     }
 }
 
-// --- Calorías y macros ---
+
+/* ---------- CALORÍAS Y MACROS ---------- */
+
 @Composable
 fun NutritionSummaryCard(
     summary: DailyNutritionSummaryUiModel?,
@@ -411,7 +443,7 @@ fun NutritionSummaryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
@@ -477,7 +509,8 @@ fun NutritionSummaryCard(
     }
 }
 
-// --- Suplementación ---
+/* ---------- SUPLEMENTACIÓN ---------- */
+
 @Composable
 fun SupplementationCard(
     isDone: Boolean,
@@ -487,7 +520,7 @@ fun SupplementationCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
@@ -518,6 +551,8 @@ fun SupplementationCard(
         }
     }
 }
+
+/* ---------- EXTENSIÓN ---------- */
 
 private fun TrainingStage.toReadableText(): String = when (this) {
     TrainingStage.DEFINICION -> "Definición"

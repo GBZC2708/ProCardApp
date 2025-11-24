@@ -509,7 +509,7 @@ class DailyRegisterViewModel(
     }
 
     private fun supplementationKey(username: String, dateEpoch: Long): String =
-        "supplementation_done_${'$'}username_${'$'}dateEpoch"
+        "supplementation_done_${username}_${dateEpoch}"
 
     companion object {
         private const val DEFAULT_WATER_TRAINING_LITERS = 5

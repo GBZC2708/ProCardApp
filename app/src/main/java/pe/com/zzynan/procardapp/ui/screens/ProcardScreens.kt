@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,7 +48,6 @@ import pe.com.zzynan.procardapp.ui.model.WeeklyWeightPoint
 import pe.com.zzynan.procardapp.ui.model.WeeklyCaloriesPointUiModel
 import pe.com.zzynan.procardapp.ui.state.DailyRegisterUiState
 import pe.com.zzynan.procardapp.ui.model.WeightEditorUiModel
-import androidx.compose.foundation.layout.Row
 
 @Composable
 fun RegistroScreen(
@@ -85,8 +85,6 @@ fun RegistroScreen(
     val sleepRegex = Regex("^\\d*(?:\\.\\d{0,2})?$")
     val cardioRegex = Regex("^\\d{0,4}$")
 
-    val defaultCardioMinutes = 30
-
     val (showStageDialog, setShowStageDialog) = remember { mutableStateOf(false) }
     val (showSleepDialog, setShowSleepDialog) = remember { mutableStateOf(false) }
     val (showCardioDialog, setShowCardioDialog) = remember { mutableStateOf(false) }
@@ -111,9 +109,9 @@ fun RegistroScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(vertical = 0.dp),
 
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         TrainingStageCard(stage = stage, onStageClick = { setShowStageDialog(true) })
 
@@ -125,8 +123,10 @@ fun RegistroScreen(
 
         // Peso + Sueño en una fila
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(0.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 0.dp),
+            horizontalArrangement = Arrangement.spacedBy(0.dp) // ⬅️ espacio entre cards
         ) {
             WeightCard(
                 uiModel = uiState.weightCard,
@@ -143,19 +143,34 @@ fun RegistroScreen(
 
         // Cardio + Entrenamiento en una fila
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
+            val isCardioDone = cardioMinutes > 0
+
             CardioCard(
                 minutes = cardioMinutes,
-                isDone = cardioMinutes > 0,
-                onEditMinutesClick = { setShowCardioDialog(true) },
+                isDone = isCardioDone,
+                // Solo permitimos editar cuando NO está marcado
+                onEditMinutesClick = {
+                    if (!isCardioDone) {
+                        setShowCardioDialog(true)
+                    }
+                },
                 onToggleDone = {
-                    if (cardioMinutes > 0) onCardioMinutesConfirmed(0)
-                    else onCardioMinutesConfirmed(defaultCardioMinutes)
+                    if (isCardioDone) {
+                        // Al desmarcar: poner 0 min y permitir editar de nuevo
+                        onCardioMinutesConfirmed(0)
+                    } else {
+                        // Al marcar: abrir diálogo para que el usuario elija minutos (>= 0)
+                        setShowCardioDialog(true)
+                    }
                 },
                 modifier = Modifier.weight(1f)
             )
+
             TrainingDoneCard(
                 isDone = trainingDone,
                 onToggle = { onTrainingDoneChanged(!trainingDone) },
@@ -165,7 +180,9 @@ fun RegistroScreen(
 
         // Agua + Sal en una fila
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             WaterCard(
@@ -187,7 +204,10 @@ fun RegistroScreen(
         }
 
         NutritionSummaryCard(summary = uiState.nutritionSummary)
-        SupplementationCard(isDone = uiState.supplementationDone, onToggle = onSupplementationToggled)
+        SupplementationCard(
+            isDone = uiState.supplementationDone,
+            onToggle = onSupplementationToggled
+        )
 
         uiState.metrics?.let { metrics ->
             Column(

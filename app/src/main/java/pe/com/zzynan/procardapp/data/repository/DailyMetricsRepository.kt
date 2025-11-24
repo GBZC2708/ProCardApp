@@ -3,6 +3,7 @@ package pe.com.zzynan.procardapp.data.repository
 import kotlinx.coroutines.flow.Flow
 import pe.com.zzynan.procardapp.data.local.dao.DailyMetricsDao
 import pe.com.zzynan.procardapp.data.local.entity.DailyMetricsEntity
+import pe.com.zzynan.procardapp.domain.model.TrainingStage
 
 /**
  * Repositorio que actúa como punto único de acceso a los datos de métricas diarias.
@@ -71,4 +72,39 @@ class DailyMetricsRepository(
     suspend fun purgeHistoryBefore(username: String, thresholdEpochDay: Long) {
         dailyMetricsDao.deleteOlderThan(username, thresholdEpochDay)
     }
+
+    /**
+     * Obtiene las métricas del día. Si no existen, las crea.
+     * Además garantiza que la suplementación siempre inicie en false cada día.
+     */
+    suspend fun getOrCreateTodayMetrics(
+        username: String,
+        dateEpoch: Long
+    ): DailyMetricsEntity {
+
+        val today = dailyMetricsDao.getMetricsForDay(username, dateEpoch)
+
+        return if (today == null) {
+
+            val newMetrics = DailyMetricsEntity(
+                username = username,
+                dateEpoch = dateEpoch,
+                weightFasted = 0f,
+                dailySteps = 0,
+                cardioMinutes = 0,
+                trainingDone = false,
+                waterMl = 0,
+                saltGramsX10 = 0,
+                sleepMinutes = 0,
+                stage = TrainingStage.DEFINICION.value
+            )
+
+            dailyMetricsDao.upsertMetrics(newMetrics)
+            newMetrics
+
+        } else {
+            today
+        }
+    }
 }
+
