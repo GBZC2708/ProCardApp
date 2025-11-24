@@ -15,4 +15,10 @@ class SaveUserProfileUseCase(
         val sanitized = rawName.ifBlank { UserProfile.DEFAULT_DISPLAY_NAME }
         userProfileRepository.upsertUserProfile(UserProfile(sanitized).toEntity())
     }
+
+    suspend operator fun invoke(profile: UserProfile) {
+        userProfileRepository.upsertUserProfile(profile.copy(
+            displayName = profile.displayName.ifBlank { UserProfile.DEFAULT_DISPLAY_NAME }
+        ).toEntity())
+    }
 }

@@ -107,8 +107,8 @@ sealed class ProcardScreen(
     data object Calculadora : ProcardScreen(
         route = "calculadora",
         labelRes = R.string.screen_calculadora,
-        title = "Calculadora",
-        description = "Realiza cálculos de macros, calorías y objetivos.",
+        title = "Body Dashboard",
+        description = "Panel de control corporal.",
         iconFilled = Icons.Filled.Calculate,
         iconOutlined = Icons.Outlined.Calculate
     )
